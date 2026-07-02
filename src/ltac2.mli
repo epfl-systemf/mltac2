@@ -420,7 +420,7 @@ module Proj : sig
   val set_unfolded : t -> bool -> t
 
   val of_constant : constant -> t option
-  val to_constant : t -> constant option
+  val to_constant : t -> Projection.Repr.t option
 
   val print : t -> message
 end
@@ -482,7 +482,7 @@ module Rewrite : sig
       (constr ->
        constr ->
        constr option ->
-       Rewrite.rewrite_result Proofview.tactic) ->
+       Rewrite.Result.t Proofview.tactic) ->
       t
   end
 

@@ -570,10 +570,12 @@ module Ltac2Proj = struct
   let of_constant c =
     Structures.PrimitiveProjections.find_opt c |> Option.map (fun p -> Projection.make p false)
 
-  let to_constant p = Some (Projection.constant p)
+  let to_constant p = Some (Projection.repr p)
 
   let print p =
-    Nametab.pr_global_env Id.Set.empty (ConstRef (Projection.constant p))
+    Nametab.pr_global_env
+      Id.Set.empty
+      (ConstRef (Environ.projection_repr_constant (Global.env ()) (Projection.repr p)))
 end
 
 (** {2 Module} *)
