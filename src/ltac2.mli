@@ -224,8 +224,6 @@ module Control : sig
     (Evd.evar_map -> Evd.evar_map * constr) ->
     unit Proofview.tactic
 
-  val solve_constraints : unit Proofview.tactic
-
   val with_holes :
     'a Proofview.tactic ->
     ('a -> 'b Proofview.tactic) ->
@@ -879,4 +877,6 @@ module Unification : sig
     constr ->
     constr ->
     unit Proofview.tactic
+
+  val solve_constraints : unit Proofview.tactic
 end

@@ -380,8 +380,6 @@ module Ltac2Control = struct
 
   let refine c = Refine.refine ~typecheck:true c
 
-  let solve_constraints = Refine.solve_constraints
-
   let with_holes x f = Tacticals.tclRUNWITHHOLES false x f
 
   let progress = Proofview.tclPROGRESS
@@ -848,6 +846,8 @@ module Ltac2Unification = struct
     Reductionops.infer_conv ~pb ~ts env sigma c1 c2
 
   let unify = Tac2tactics.evarconv_unify
+
+  let solve_constraints = Refine.solve_constraints
 end
 
 (** {2 Standard tactics} *)
