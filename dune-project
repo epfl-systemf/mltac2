@@ -1,0 +1,21 @@
+(lang dune 3.22)
+(using rocq 0.12)
+
+(name mltac2)
+
+(generate_opam_files true)
+
+(authors "Dario Halilovic")
+(maintainers "Dario Halilovic")
+(license LGPL-2.1-only)
+
+(homepage "https://github.com/epfl-systemf/mltac2")
+(source
+ (github epfl-systemf/mltac2))
+(bug_reports "https://github.com/epfl-systemf/mltac2/issues")
+
+(package
+ (name mltac2)
+ (synopsis "Ltac2 APIs in OCaml")
+ (depends
+   rocq-runtime))
