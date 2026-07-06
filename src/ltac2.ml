@@ -676,17 +676,7 @@ module Ltac2Module = struct
     List.map (fun dp -> MPfile dp) (Library.loaded_libraries())
 
   module Field = struct
-    open Tac2ffi
-    open ModField
-
-    type t = ModField.t
-
-    let handle f handler =
-      let (handle_submodule, handle_reference, handle_rewrule) = handler in
-      match f with
-      | Ref x -> handle_reference x
-      | Submodule x -> handle_submodule x
-      | Rewrule -> handle_rewrule ()
+    type t = Tac2ffi.ModField.t
   end
 
   let openmod_revstruct m senv =

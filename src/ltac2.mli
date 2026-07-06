@@ -375,13 +375,6 @@ module Module : sig
 
   module Field : sig
     type t = Tac2ffi.ModField.t
-
-    val handle :
-      t ->
-      (ModPath.t -> 'a)
-      * (GlobRef.t -> 'a)
-      * (unit -> 'a) ->
-      'a
   end
 
   val contents : t -> Field.t list option
