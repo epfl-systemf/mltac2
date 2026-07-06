@@ -486,7 +486,7 @@ module Rewrite : sig
 end
 
 module Scheme : sig
-  type kind = string
+  type kind
 
   val lookup : kind -> GlobRef.t -> GlobRef.t option
 
