@@ -360,8 +360,8 @@ module Module : sig
   val equal : t -> t -> bool
   val to_message : t -> message
 
-  val is_modtype : t -> Environ.env -> Evd.evar_map -> bool
-  val is_functor : t -> Environ.env -> Evd.evar_map -> bool
+  val is_modtype : Environ.env -> t -> bool
+  val is_functor : Environ.env -> t -> bool
   val is_bound_module : t -> bool
   val is_library : t -> bool
   val is_open : t -> bool
