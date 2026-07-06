@@ -7,7 +7,6 @@ open Ltac2_plugin
 
 type ident = Id.t
 type uint63 = Uint63.t
-type pstring = Pstring.t
 type evar = Evar.t
 type sort = Sorts.t
 type cast = Constr.cast_kind
@@ -425,24 +424,6 @@ module Env : sig
       when this reference is universe-polymorphic. *)
 end
 
-(** {2 Existential variables} *)
-
-module Evar : sig
-  type t = evar
-
-  val equal : t -> t -> bool
-  (** [equal e1 e2] tests syntactic equality of [e1] and [e2]. *)
-end
-
-(** {2 Float} *)
-
-module Float : sig
-  type t = Float64.t
-
-  val equal : t -> t -> bool
-  (** [equal f1 f2] tests 64-bit float equality of [f1] and [f2]. *)
-end
-
 (** {2 Fresh name generation} *)
 
 module Fresh : sig
@@ -789,23 +770,6 @@ module Proj : sig
   (** [print proj] prints the projection using the shortest qualified identifier
       which refers to it. Does not avoid variable names in the current or global
       environment.  *)
-end
-
-(** {2 Primitive strings} *)
-
-module Pstring : sig
-  type t = pstring
-
-  val max_length : uint63
-  val to_string : t -> string
-  val of_string : string -> t option
-  val make : uint63 -> uint63 -> t
-  val length : t -> uint63
-  val get : t -> uint63 -> uint63
-  val sub : t -> uint63 -> uint63 -> t
-  val cat : t -> t -> t
-  val equal : t -> t -> bool
-  val compare : t -> t -> int
 end
 
 (** {2 Rewriting} *)
@@ -1247,19 +1211,6 @@ module Std : sig
   val simple_congruence : int option -> constr list option -> unit Proofview.tactic
 
   val f_equal : unit Proofview.tactic
-end
-
-(** {2 Uint63} *)
-
-module Uint63 : sig
-  type t = uint63
-
-  val of_int : int -> t
-
-  val equal : t -> t -> bool
-  val compare : t -> t -> int
-
-  val print : t -> message
 end
 
 (** {2 Transparent state} *)

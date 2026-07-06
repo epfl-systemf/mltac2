@@ -74,10 +74,6 @@ module Ltac2Ident = struct
     with e when CErrors.noncritical e -> None
 end
 
-(** {2 Pstring} *)
-
-module Ltac2Pstring = Pstring
-
 (** {2 Terms} *)
 
 module Ltac2Constr = struct
@@ -215,30 +211,6 @@ module Ltac2Constr = struct
   let has_evar sigma c =
     Evarutil.has_undefined_evars sigma c
 end
-
-(** {2 Uint63} *)
-
-module Ltac2Uint63 = struct
-  type t = Uint63.t
-  let equal = Uint63.equal
-  let compare = Uint63.compare
-
-  let of_int = Uint63.of_int
-
-  let print i = Pp.str (Uint63.to_string i)
-end
-
-(** {2 Evar} *)
-
-module Ltac2Evar = Evar
-
-(** {2 Float} *)
-
-module Ltac2Float = Float64
-
-(** {2 Meta} *)
-
-module Ltac2Meta = Int
 
 (** {2 Constant} *)
 
@@ -1007,7 +979,6 @@ end
 (** Built-in types *)
 type ident = Id.t
 type uint63 = Uint63.t
-type pstring = Pstring.t
 type evar = Evar.t
 type sort = Sorts.t
 type cast = Constr.cast_kind
@@ -1030,8 +1001,6 @@ module Constr           = Ltac2Constr
 module Constructor      = Ltac2Constructor
 module Control          = Ltac2Control
 module Env              = Ltac2Env
-module Evar             = Ltac2Evar
-module Float            = Ltac2Float
 module Fresh            = Ltac2Fresh
 module Ident            = Ltac2Ident
 module Ind              = Ltac2Ind
@@ -1039,10 +1008,8 @@ module Message          = Ltac2Message
 module Module           = Ltac2Module
 module Pattern          = Ltac2Pattern
 module Proj             = Ltac2Proj
-module Pstring          = Ltac2Pstring
 module Rewrite          = Ltac2Rewrite
 module Scheme           = Ltac2Scheme
 module Std              = Ltac2Std
-module Uint63           = Ltac2Uint63
 module TransparentState = Ltac2TransparentState
 module Unification      = Ltac2Unification
