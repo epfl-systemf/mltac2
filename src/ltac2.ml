@@ -630,13 +630,13 @@ module Ltac2Module = struct
     | None -> false
     | Some nparams -> not (Int.equal nparams 0)
 
-  let is_modtype m env _ =
+  let is_modtype env m =
     if is_openmod m then open_module_is_modtype m
     else
       try ignore (Environ.lookup_modtype m env); true
       with Not_found -> false
 
-  let is_functor m env _ =
+  let is_functor env m =
     if is_openmod m then open_module_is_functor m
     else
       let modbody_is_functor m = match Mod_declarations.mod_type m with
