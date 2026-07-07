@@ -2,7 +2,7 @@
 opam-version: "2.0"
 synopsis: "Ltac2 APIs in OCaml"
 maintainer: ["Dario Halilovic"]
-authors: ["Dario Halilovic"]
+authors: ["Dario Halilovic" "Pierre-Marie Pédrot"]
 license: "LGPL-2.1-only"
 homepage: "https://github.com/epfl-systemf/mltac2"
 bug-reports: "https://github.com/epfl-systemf/mltac2/issues"

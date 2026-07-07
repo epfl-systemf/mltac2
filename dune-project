@@ -4,7 +4,7 @@
 
 (generate_opam_files true)
 
-(authors "Dario Halilovic")
+(authors "Dario Halilovic" "Pierre-Marie Pédrot")
 (maintainers "Dario Halilovic")
 (license LGPL-2.1-only)
 
