@@ -869,8 +869,11 @@ module Rewrite : sig
     val eval : Redexpr.red_expr -> t
     (** Converts the term under consideration. *)
 
+    [%%if rocq >= "9.3"]
     val matches : pattern -> t
-    (** The identity if the pattern matching succeeds, fails otherwise. *)
+    (** The identity if the pattern matching succeeds, fails otherwise.
+
+        @since 9.3 *)
 
     val tactic : (constr -> constr -> constr option -> Rewrite.Result.t Proofview.tactic) -> t
     (** The [tactic f] strategy applies [f] to arguments [ty], [lhs] and [rel],
@@ -888,13 +891,19 @@ module Rewrite : sig
 
         If the proof [prf] is syntactically [eq_refl _], then the witness of the rewriting
         is simply a *conversion* requiring no explicit proof and no congruence lemmas
-        for the context of the rewrite. *)
+        for the context of the rewrite.
+
+        @since 9.3 *)
+
+    [%%endif]
   end
 
   val rewrite_strat : ?in_hyp:ident -> Strategy.t -> unit Proofview.tactic
   (** Runs rewrite strategy on the type of a hypothesis or the goal if the
       [in_hyp] is [None]. *)
 end
+
+[%%if rocq >= "9.3"]
 
 (** {2 Schemes} *)
 
@@ -997,6 +1006,7 @@ module Scheme : sig
   val eq_dec : kind
   (** Decidable equality scheme. *)
 end
+[%%endif]
 
 (** {2 Standard tactics} *)
 
@@ -1841,14 +1851,6 @@ module TransparentState : sig
   (** Type representing a transparency state. A transparency state is a set of
       variables, constants, and primitive projections. *)
 
-  type strategy_level = Conv_oracle.level
-  (** Strategy levels used by [with_strategy]:
-
-      - [Expand] corresponds to the [-oo] level (always unfold)
-      - [Opaque] corresponds to the [+oo] level (never unfold)
-      - [Level n] corresponds to integer level [n] (where [Level 0] is
-        transparent). *)
-
   val empty : t
   (** [empty] is the empty transparency state (all constants are opaque). *)
 
@@ -1909,11 +1911,25 @@ module TransparentState : sig
   (** [mem_var v t] checks whether the local variable [v] is present in the
       transparency state [t]. *)
 
+  [%%if rocq >= "9.3"]
+  type strategy_level = Conv_oracle.level
+  (** Strategy levels used by [with_strategy]:
+
+      - [Expand] corresponds to the [-oo] level (always unfold)
+      - [Opaque] corresponds to the [+oo] level (never unfold)
+      - [Level n] corresponds to integer level [n] (where [Level 0] is
+        transparent). *)
+
   val with_strategy : strategy_level -> GlobRef.t list -> 'a Proofview.tactic -> 'a Proofview.tactic
   (** [with_strategy lvl refs tac] temporarily sets the strategy level of all
       references in [refs] to [lvl], executes [tac], and then restores the
       original strategy levels. This is the Ltac2 analogue of the
-      [with_strategy] Ltac tactic and the [Strategy] vernacular command. *)
+      [with_strategy] Ltac tactic and the [Strategy] vernacular command.
+
+      @since 9.3
+   *)
+
+  [%%endif]
 end
 
 (** {2 Unification} *)

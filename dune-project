@@ -17,4 +17,5 @@
  (name mltac2)
  (synopsis "Ltac2 APIs in OCaml")
  (depends
-   rocq-runtime))
+   (rocq-runtime (>= 9.2))
+   ppx_optcomp))

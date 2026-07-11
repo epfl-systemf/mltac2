@@ -454,9 +454,15 @@ module Ltac2Ind = struct
 
   let nparams_uniform (_, mib) = mib.Declarations.mind_nparams_rec
 
+  [%%if rocq = "9.2"]
+  let get_projections (ind,mib) =
+    Declareops.inductive_make_projections ind mib
+    |> Option.map (fun (x, _) -> Array.map (fun (p,_) -> Projection.make p false) x)
+  [%%else]
   let get_projections (ind,mib) =
     Declareops.inductive_make_projections ind mib
     |> Option.map (Array.map (fun (p,_) -> Projection.make p false))
+  [%%endif]
 
   let constructor_nargs ((_,i),mib) =
     let open Declarations in
@@ -485,6 +491,8 @@ module Ltac2Constructor = struct
   let print ctor =
     Nametab.pr_global_env Id.Set.empty (ConstructRef ctor)
 end
+
+[%%if rocq >= "9.3"]
 
 (** {2 Schemes} *)
 
@@ -521,6 +529,7 @@ module Ltac2Scheme = struct
   let case_nodep = "case_nodep"
   let case_dep = "case_dep"
 end
+[%%endif]
 
 (** {2 Projection} *)
 
@@ -540,10 +549,17 @@ module Ltac2Proj = struct
 
   let to_constant p = Some (Projection.repr p)
 
+  [%%if rocq = "9.2"]
+  let print p =
+    Nametab.pr_global_env
+      Id.Set.empty
+      (ConstRef (Projection.constant p))
+  [%%else]
   let print p =
     Nametab.pr_global_env
       Id.Set.empty
       (ConstRef (Environ.projection_repr_constant (Global.env ()) (Projection.repr p)))
+  [%%endif]
 end
 
 (** {2 Module} *)
@@ -725,9 +741,13 @@ module Ltac2Rewrite = struct
     let lemmas       = Tac2tactics.RewriteStrats.lemmas
     let fold         = Rewrite.Strategies.fold
     let eval         = Rewrite.Strategies.reduce
+    [%%if rocq >= "9.3"]
     let matches      = Rewrite.Strategies.matches
+    [%%endif]
 
+    [%%if rocq >= "9.3"]
     let tactic = Tac2tactics.wrap_tactic_call
+    [%%endif]
   end
 
   let rewrite_strat ?in_hyp s = Tac2tactics.rewrite_strat s in_hyp
@@ -794,7 +814,9 @@ module Ltac2TransparentState = struct
   let mem_proj p ts = PRpred.mem (Projection.repr p) ts.tr_prj
   let mem_var v ts = Id.Pred.mem v ts.tr_var
 
+  [%%if rocq >= "9.3"]
   let with_strategy level grs tac = Tac2tactics.with_strategy level grs (fun () -> tac)
+  [%%endif]
 end
 
 (** {2 Unification} *)
@@ -1021,7 +1043,9 @@ module Module           = Ltac2Module
 module Pattern          = Ltac2Pattern
 module Proj             = Ltac2Proj
 module Rewrite          = Ltac2Rewrite
+[%%if rocq >= "9.3"]
 module Scheme           = Ltac2Scheme
+[%%endif]
 module Std              = Ltac2Std
 module TransparentState = Ltac2TransparentState
 module Unification      = Ltac2Unification
