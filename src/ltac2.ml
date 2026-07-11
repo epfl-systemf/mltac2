@@ -453,7 +453,7 @@ module Ltac2Ind = struct
 
   let nparams_uniform (_, mib) = mib.Declarations.mind_nparams_rec
 
-  [%%if rocq = "9.2"]
+  [%%if rocq = (9, 2)]
   let get_projections (ind,mib) =
     Declareops.inductive_make_projections ind mib
     |> Option.map (fun (x, _) -> Array.map (fun (p,_) -> Projection.make p false) x)
@@ -491,7 +491,7 @@ module Ltac2Constructor = struct
     Nametab.pr_global_env Id.Set.empty (ConstructRef ctor)
 end
 
-[%%if rocq >= "9.3"]
+[%%if rocq >= (9, 3)]
 
 (** {2 Schemes} *)
 
@@ -548,7 +548,7 @@ module Ltac2Proj = struct
 
   let to_constant p = Some (Projection.repr p)
 
-  [%%if rocq = "9.2"]
+  [%%if rocq = (9, 2)]
   let print p =
     Nametab.pr_global_env
       Id.Set.empty
@@ -740,11 +740,11 @@ module Ltac2Rewrite = struct
     let lemmas       = Tac2tactics.RewriteStrats.lemmas
     let fold         = Rewrite.Strategies.fold
     let eval         = Rewrite.Strategies.reduce
-    [%%if rocq >= "9.3"]
+    [%%if rocq >= (9, 3)]
     let matches      = Rewrite.Strategies.matches
     [%%endif]
 
-    [%%if rocq >= "9.3"]
+    [%%if rocq >= (9, 3)]
     let tactic = Tac2tactics.wrap_tactic_call
     [%%endif]
   end
@@ -812,7 +812,7 @@ module Ltac2TransparentState = struct
   let mem_proj p ts = PRpred.mem (Projection.repr p) ts.tr_prj
   let mem_var v ts = Id.Pred.mem v ts.tr_var
 
-  [%%if rocq >= "9.3"]
+  [%%if rocq >= (9, 3)]
   type strategy_level = Conv_oracle.level
   let with_strategy level grs tac = Tac2tactics.with_strategy level grs (fun () -> tac)
   [%%endif]
@@ -1042,7 +1042,7 @@ module Module           = Ltac2Module
 module Pattern          = Ltac2Pattern
 module Proj             = Ltac2Proj
 module Rewrite          = Ltac2Rewrite
-[%%if rocq >= "9.3"]
+[%%if rocq >= (9, 3)]
 module Scheme           = Ltac2Scheme
 [%%endif]
 module Std              = Ltac2Std

@@ -869,7 +869,7 @@ module Rewrite : sig
     val eval : Redexpr.red_expr -> t
     (** Converts the term under consideration. *)
 
-    [%%if rocq >= "9.3"]
+    [%%if rocq >= (9, 3)]
     val matches : pattern -> t
     (** The identity if the pattern matching succeeds, fails otherwise.
 
@@ -903,7 +903,7 @@ module Rewrite : sig
       [in_hyp] is [None]. *)
 end
 
-[%%if rocq >= "9.3"]
+[%%if rocq >= (9, 3)]
 
 (** {2 Schemes} *)
 
@@ -1911,7 +1911,7 @@ module TransparentState : sig
   (** [mem_var v t] checks whether the local variable [v] is present in the
       transparency state [t]. *)
 
-  [%%if rocq >= "9.3"]
+  [%%if rocq >= (9, 3)]
   type strategy_level = Conv_oracle.level
   (** Strategy levels used by [with_strategy]:
 
