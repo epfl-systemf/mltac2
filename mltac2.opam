@@ -13,7 +13,6 @@ depends: [
   "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst"] {dev}
   [
     "dune"
     "build"
@@ -27,4 +26,3 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/epfl-systemf/mltac2.git"
-x-maintenance-intent: ["(latest)"]
