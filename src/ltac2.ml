@@ -10,7 +10,6 @@ open Tac2types
 open Proofview.Notations
 
 let return = Proofview.tclUNIT
-let throw = Tac2core.throw
 
 (** {1 Ltac2 APIs} *)
 
@@ -757,7 +756,6 @@ end
 
 module Ltac2TransparentState = struct
   type t = TransparentState.t
-  type strategy_level = Conv_oracle.level
 
   open TransparentState
 
@@ -815,6 +813,7 @@ module Ltac2TransparentState = struct
   let mem_var v ts = Id.Pred.mem v ts.tr_var
 
   [%%if rocq >= "9.3"]
+  type strategy_level = Conv_oracle.level
   let with_strategy level grs tac = Tac2tactics.with_strategy level grs (fun () -> tac)
   [%%endif]
 end
