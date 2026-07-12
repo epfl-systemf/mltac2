@@ -8,7 +8,7 @@ homepage: "https://github.com/epfl-systemf/mltac2"
 bug-reports: "https://github.com/epfl-systemf/mltac2/issues"
 depends: [
   "dune" {>= "3.17"}
-  "rocq-runtime" {>= "9.2"}
+  "coq-core" {>= "9.2"}
   "ppx_optcomp"
   "odoc" {with-doc}
 ]
