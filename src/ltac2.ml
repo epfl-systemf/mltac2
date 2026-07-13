@@ -130,11 +130,8 @@ module Ltac2Constr = struct
 
     let make env sigma na ty =
       match Retyping.relevance_of_type env sigma ty with
-      | rel ->
-         let na = match na with None -> Anonymous | Some id -> Name id in
-         Ok (Context.make_annot na rel, ty)
-      | exception (Retyping.RetypeError _) ->
-         Error ()
+      | rel -> Ok (Context.make_annot na rel, ty)
+      | exception (Retyping.RetypeError _) -> Error ()
 
     let unsafe_make na rel ty =
       Context.make_annot na (EConstr.ERelevance.make rel), ty
@@ -244,12 +241,12 @@ module Ltac2Pattern = struct
       of_ans ans
     end
 
-  let matches_goal rev hp cp =
+  let matches_goal ?(reverse = false) hp cp =
     Proofview.Goal.enter_one begin fun gl ->
       let env = Proofview.Goal.env gl in
       let sigma = Proofview.Goal.sigma gl in
       let concl = Proofview.Goal.concl gl in
-      Tac2match.match_goal env sigma concl ~rev (hp, cp)
+      Tac2match.match_goal env sigma concl ~rev:reverse (hp, cp)
     end
 
   let instantiate = Constr_matching.instantiate_context
@@ -356,10 +353,9 @@ module Ltac2Control = struct
 
   let progress = Proofview.tclPROGRESS
 
-  (* Eta-expanded to remove optional arguments. *)
-  let abstract id f = Abstract.tclABSTRACT id f
+  let abstract ?name t = Abstract.tclABSTRACT name t
 
-  let time = Proofview.tclTIME
+  let time ?name t = Proofview.tclTIME name t
 
   let timeout = Proofview.tclTIMEOUT
 
@@ -725,7 +721,7 @@ module Ltac2Rewrite = struct
     let outermost    = Rewrite.Strategies.outermost
     let hints        = Tac2tactics.RewriteStrats.hints
     let old_hints    = Tac2tactics.RewriteStrats.old_hints
-    let one_lemma    = Tac2tactics.RewriteStrats.one_lemma
+    let one_lemma c ~ltr = Tac2tactics.RewriteStrats.one_lemma c ltr
     let lemmas       = Tac2tactics.RewriteStrats.lemmas
     let fold         = Rewrite.Strategies.fold
     let eval         = Rewrite.Strategies.reduce
@@ -734,7 +730,7 @@ module Ltac2Rewrite = struct
     let tactic = Tac2tactics.wrap_tactic_call
   end
 
-  let rewrite_strat = Tac2tactics.rewrite_strat
+  let rewrite_strat ?in_hyp s = Tac2tactics.rewrite_strat s in_hyp
 end
 
 (** {2 Transparent state} *)
@@ -841,33 +837,42 @@ module Ltac2Std = struct
   type move_location = Id.t Logic.move_location
   type inversion_kind = Inv.inversion_kind
 
-  let intros = Tac2tactics.intros_patterns
+  let intro ?name ?(where = Logic.MoveLast) () =
+    Tactics.intro_move name where
 
-  let apply = Tac2tactics.apply
+  let intros ?(e = false) ?(patterns = []) () = Tac2tactics.intros_patterns e patterns
 
-  let elim = Tac2tactics.elim
-  let case = Tac2tactics.general_case_analysis
+  let apply ?(e = false) ?in_hyp_as bindings =
+    let bindings = List.map (fun c -> fun () -> return c) bindings in
+    Tac2tactics.apply true e bindings in_hyp_as
+
+  let elim ?(e = false) ?using c = Tac2tactics.elim e c using
+
+  let case ?(e = false) c = Tac2tactics.general_case_analysis e c
 
   let generalize = Tac2tactics.generalize
 
   let assert_ = Tac2tactics.assert_
-  let enough c tac ipat =
-    Tac2tactics.forward false tac ipat c
+  let enough ?as_pattern ?by c =
+    Tac2tactics.forward false (Some by) as_pattern c
 
-  let pose na c = Tactics.letin_tac None na c None Locusops.nowhere
+  let pose name c = Tactics.letin_tac None name c None Locusops.nowhere
 
-  let set ev p cl =
+  let default_on_conclusion: clause = { onhyps = Some []; concl_occs = AllOccurrences }
+  let default_everywhere: clause = { onhyps = None; concl_occs = AllOccurrences }
+
+  let set ?(e = false) ?(where = default_on_conclusion) name c =
     Proofview.tclEVARMAP >>= fun sigma ->
-    p >>= fun (na, c) ->
-    Tac2tactics.letin_pat_tac ev None na (Some sigma, c) cl
+    Tac2tactics.letin_pat_tac e None name (Some sigma, c) where
 
-  let remember ev na c eqpat cl =
-    let eqpat = Option.default IntroAnonymous eqpat in
+  let remember ?(e = false) ?as_name ?(eqn = IntroAnonymous) ?(where = default_everywhere) c =
+    let as_name = match as_name with Some id -> Name id | None -> Anonymous in
     Proofview.tclEVARMAP >>= fun sigma ->
-    Tac2tactics.letin_pat_tac ev (Some (true, eqpat)) na (Some sigma, c) cl
+    Tac2tactics.letin_pat_tac e (Some (true, eqn)) as_name (Some sigma, c) where
 
-  let destruct = Tac2tactics.induction_destruct false
-  let induction = Tac2tactics.induction_destruct true
+  let destruct ?(e = false) ?using is = Tac2tactics.induction_destruct false e is using
+
+  let induction ?(e = false) ?using is = Tac2tactics.induction_destruct true e is using
 
   let exfalso = Tactics.exfalso
 
@@ -876,7 +881,7 @@ module Ltac2Std = struct
 
     let red = Genredexpr.Red
     let hnf = Genredexpr.Hnf
-    let simpl = Tac2tactics.simpl
+    let simpl ?where flags = Tac2tactics.simpl flags where
     let cbv = Tac2tactics.cbv
     let cbn = Tac2tactics.cbn
     let lazy_ = Tac2tactics.lazy_
@@ -884,39 +889,42 @@ module Ltac2Std = struct
     let fold cs = Genredexpr.Fold cs
     let pattern = Tac2tactics.pattern
 
-    let vm = Tac2tactics.vm
-    let native = Tac2tactics.native
+    let vm ?where () = Tac2tactics.vm where
+    let native ?where () = Tac2tactics.native where
   end
 
   let eval_in = Tac2tactics.reduce_in
   let eval = Tac2tactics.reduce_constr
 
-  let change = Tac2tactics.change
-  let rewrite = Tac2tactics.rewrite
-  let setoid_rewrite = Tac2tactics.setoid_rewrite
+  let change ?pattern ?(where = default_on_conclusion) f =
+    Tac2tactics.change pattern f where
 
-  let inversion = Tac2tactics.inversion
+  let rewrite ?(e = false) ?(where = default_on_conclusion) ?by rewrites =
+    (* Thunk the tactic. *)
+    let by = Option.map (fun by -> fun () -> by) by in
+    Tac2tactics.rewrite e rewrites where by
+
+  let setoid_rewrite ?(ltr = true) ?in_hyp t where = Tac2tactics.setoid_rewrite ltr (return t) where in_hyp
+
+  let inversion ?(kind = Inv.FullInversion) ?as_pattern ?in_hyps arg =
+    Tac2tactics.inversion kind arg as_pattern in_hyps
 
   let reflexivity = Tactics.intros_reflexivity
 
   let move = Tactics.move_hyp
 
-  let intro id mv =
-    let mv = Option.default Logic.MoveLast mv in
-    Tactics.intro_move id mv
+  let specialize ?as_pattern t = Tac2tactics.specialize t as_pattern
 
-  let specialize = Tac2tactics.specialize
-
-  let assumption = Tactics.assumption
-  let eassumption = Eauto.e_assumption
+  let assumption ?(e = false) () =
+    if e then Eauto.e_assumption else Tactics.assumption
 
   let transitivity c = Tactics.intros_transitivity (Some c)
   let etransitivity = Tactics.intros_transitivity None
 
   let cut = Tactics.cut
 
-  let left = Tac2tactics.left_with_bindings
-  let right = Tac2tactics.right_with_bindings
+  let left ?(e = false) ?(bindings = NoBindings) () = Tac2tactics.left_with_bindings e bindings
+  let right ?(e = false) ?(bindings = NoBindings) () = Tac2tactics.right_with_bindings e bindings
 
   let intros_until = Tactics.intros_until
 
@@ -924,12 +932,14 @@ module Ltac2Std = struct
   let vm_cast_no_check = Tactics.vm_cast_no_check
   let native_cast_no_check = Tactics.native_cast_no_check
 
-  let constructor ev = Tactics.any_constructor ev None
-  let constructor_n ev n bnd = Tac2tactics.constructor_tac ev None n bnd
+  let constructor ?(e = false) ?n ?(bindings = NoBindings) () =
+    match n with
+    | Some n -> Tac2tactics.constructor_tac e None n bindings
+    | None -> Tactics.any_constructor e None
 
-  let symmetry = Tac2tactics.symmetry
+  let symmetry ?(where = default_on_conclusion) () = Tac2tactics.symmetry where
 
-  let split = Tac2tactics.split_with_bindings
+  let split ?(e = false) ?(bindings = NoBindings) () = Tac2tactics.split_with_bindings e bindings
   let rename = Tactics.rename_hyp
 
   let revert = Generalize.revert
@@ -942,34 +952,36 @@ module Ltac2Std = struct
   let keep = Tactics.keep
   let clearbody = Tactics.clear_body
 
-  let discriminate = Tac2tactics.discriminate
-  let injection = Tac2tactics.injection
+  let discriminate ?(e = false) ?arg () = Tac2tactics.discriminate e arg
+  let injection ?(e = false) ?arg ?as_patterns () = Tac2tactics.injection e as_patterns arg
 
   let absurd = Contradiction.absurd
-  let contradiction = Tac2tactics.contradiction
+  let contradiction ?witness () = Tac2tactics.contradiction witness
 
-  let autorewrite all by ids cl =
+  let autorewrite ~all ?(where = default_on_conclusion) ?using dbs =
     (* Thunk the tactic *)
-    let by = Option.map (fun by -> fun () -> by) by in
-    Tac2tactics.autorewrite ~all by ids cl
+    let using = Option.map (fun using -> fun () -> using) using in
+    Tac2tactics.autorewrite ~all using dbs where
 
-  let subst = Equality.subst
-  let subst_all = Equality.subst_all ()
+  let subst ?hyps () =
+    match hyps with
+    | None -> Equality.subst_all ()
+    | Some hyps -> Equality.subst hyps
 
   type debug = Hints.debug
   type strategy = Class_tactics.search_strategy
 
-  let trivial = Tac2tactics.trivial
-  let auto = Tac2tactics.auto
-  let eauto = Tac2tactics.eauto
-  let typeclasses_eauto = Tac2tactics.typeclasses_eauto
+  let trivial ?(debug = Hints.Off) ?dbs refs = Tac2tactics.trivial debug refs dbs
+  let auto ?(debug = Hints.Off) ?n ?dbs refs = Tac2tactics.auto debug n refs dbs
+  let eauto ?(debug = Hints.Off) ?n ?dbs refs = Tac2tactics.eauto debug n refs dbs
+  let typeclasses_eauto ?strategy ?n ?dbs () = Tac2tactics.typeclasses_eauto strategy n dbs
 
   let resolve_tc = Class_tactics.resolve_tc
 
   let unify = Tac2tactics.unify
 
-  let congruence = Tac2tactics.congruence
-  let simple_congruence = Tac2tactics.simple_congruence
+  let congruence ?n ?hints () = Tac2tactics.congruence n hints
+  let simple_congruence ?n ?hints () = Tac2tactics.simple_congruence n hints
 
   let f_equal = Tac2tactics.f_equal
 end
