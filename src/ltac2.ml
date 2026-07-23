@@ -10,7 +10,35 @@ open Tac2types
 open Proofview.Notations
 
 let return = Proofview.tclUNIT
-let throw = Tac2core.throw
+
+[%%if rocq >= (9, 1)]
+let to_fun1 _ _ (f : 'a -> 'b) : ('a, 'b) Tac2ffi.fun1 =
+  fun x -> return (f x)
+
+let to_fun1' _ _ (f : 'a -> 'b Proofview.tactic) : ('a, 'b) Tac2ffi.fun1 =
+  f
+[%%else]
+let to_fun1 (from_t : 'a Tac2ffi.repr) (to_t : 'b Tac2ffi.repr) (f : 'a -> 'b): ('a, 'b) Tac2ffi.fun1 =
+  let f = Tac2val.mk_closure_val Tac2val.arity_one (fun x ->
+                       let x = Tac2ffi.repr_to from_t x in
+                       return (Tac2ffi.repr_of to_t (f x)))
+  in
+  Tac2ffi.to_fun1 from_t to_t f
+
+let to_fun1' (from_t : 'a Tac2ffi.repr) (to_t : 'b Tac2ffi.repr) (f : 'a -> 'b Proofview.tactic): ('a, 'b) Tac2ffi.fun1 =
+  let f = Tac2val.mk_closure_val Tac2val.arity_one (fun x ->
+                       let x = Tac2ffi.repr_to from_t x in
+                       f x >>= fun y ->
+                       return (Tac2ffi.repr_of to_t y))
+  in
+  Tac2ffi.to_fun1 from_t to_t f
+[%%endif]
+
+let thunk ret_t (x : 'a) : (unit, 'a) Tac2ffi.fun1 =
+  to_fun1 Tac2ffi.unit ret_t (fun () -> x)
+
+let thunk' ret_t (x : 'a Proofview.tactic) : (unit, 'a) Tac2ffi.fun1 =
+  to_fun1' Tac2ffi.unit ret_t (fun () -> x)
 
 (** {1 Ltac2 APIs} *)
 
@@ -33,15 +61,19 @@ module Ltac2Message = struct
   let of_lconstr env sigma c =
     Printer.pr_leconstr_env env sigma c
 
+  [%%if rocq >= (9, 2)]
   let of_preterm env sigma c =
     Printer.pr_closed_glob_env env sigma c
 
   let of_lpreterm env sigma c =
     Printer.pr_closed_lglob_env env sigma c
+  [%%endif]
 
   let of_ident = Id.print
 
+  [%%if rocq >= (9, 2)]
   let of_exninfo = CErrors.print_extra
+  [%%endif]
 
   let concat = Pp.app
 
@@ -125,7 +157,11 @@ module Ltac2Constr = struct
   end
 
   module Binder = struct
+    [%%if rocq >= (9, 1)]
     type t = Tac2ffi.binder
+    [%%else]
+    type t = (Names.Name.t EConstr.binder_annot * EConstr.types)
+    [%%endif]
     type relevance = Sorts.relevance
 
     let make env sigma na ty =
@@ -161,6 +197,7 @@ module Ltac2Constr = struct
     module Flags = struct
       type t = Pretyping.inference_flags
 
+      [%%if rocq >= (9, 2)]
       let constr_flags = {
           use_coercions = true;
           use_typeclasses = Pretyping.UseTC;
@@ -172,6 +209,20 @@ module Ltac2Constr = struct
           undeclared_evars_rr = false;
           unconstrained_sorts = false;
         }
+      [%%else]
+      let constr_flags = {
+          use_coercions = true;
+          use_typeclasses = Pretyping.UseTC;
+          solve_unification_constraints = true;
+          fail_evar = true;
+          expand_evars = true;
+          program_mode = false;
+          polymorphic = false;
+          undeclared_evars_patvars = false;
+          patvars_abstract = false;
+          unconstrained_sorts = false;
+        }
+      [%%endif]
 
       let set_use_coercion b (flags: t) =
         { flags with use_coercions = b }
@@ -224,20 +275,28 @@ module Ltac2Pattern = struct
   type context = Constr_matching.context
   let empty_context = Constr_matching.empty_context
 
+  [%%if rocq >= (9, 2)]
+  let instantiate_pattern _ _ pat =
+    pat
+  [%%else]
+  let instantiate_pattern env sigma pat =
+    Constr_matching.instantiate_pattern env sigma Id.Map.empty pat
+  [%%endif]
+
   let matches env sigma pat c =
     try Some (Constr_matching.matches env sigma pat c)
     with Constr_matching.PatternMatchingFailure -> None
 
   let matches_subterm pat c =
-    let open Constr_matching in
     let rec of_ans s = match IStream.peek s with
       | IStream.Nil -> Proofview.tclZERO Constr_matching.PatternMatchingFailure
-      | IStream.Cons ({ m_sub = (_, sub); m_ctx }, s) ->
+      | IStream.Cons (Constr_matching.{ m_sub = (_, sub); m_ctx }, s) ->
          Proofview.tclOR (return (m_ctx, sub)) (fun _ -> of_ans s)
     in
     (* Use pf_apply to match in the current goal *)
     Tac2core.pf_apply begin fun env sigma ->
-      let ans = Constr_matching.match_subterm env sigma (Id.Set.empty,pat) c in
+      let pat = instantiate_pattern env sigma pat in
+      let ans = Constr_matching.match_subterm env sigma (Id.Set.empty, pat) c in
       of_ans ans
     end
 
@@ -324,9 +383,16 @@ module Ltac2Control = struct
   let goal =
     Proofview.Goal.enter_one (fun goal -> return (Proofview.Goal.concl goal))
 
+  [%%if rocq >= (9, 2)]
   let hyp env id =
     if Environ.mem_named id env then Ok (EConstr.mkVar id)
     else Error ()
+  [%%else]
+  let hyp env id =
+    let has_hyp = try ignore (Environ.lookup_named id env); true with Not_found -> false in
+    if has_hyp then Ok (EConstr.mkVar id)
+    else Error ()
+  [%%endif]
 
   let hyp_value env id =
     match EConstr.lookup_named id env with
@@ -372,24 +438,35 @@ end
 
 module Ltac2Fresh = struct
   module Free = struct
+    [%%if rocq >= (9, 1)]
     type t = Nameops.Fresh.t
     let empty = Nameops.Fresh.empty
 
     let add = Nameops.Fresh.add
 
     let union = Nameops.Fresh.union
+    [%%else]
+    type t = Id.Set.t
 
-    let of_ids ids = List.fold_right Nameops.Fresh.add ids Nameops.Fresh.empty
+    let empty = Id.Set.empty
+
+    let add = Id.Set.add
+
+    let union = Id.Set.union
+    [%%endif]
+
+    let of_ids ids = List.fold_right add ids empty
 
     let of_constr sigma c =
       let rec fold accu c =
         match EConstr.kind sigma c with
-        | Constr.Var id -> Nameops.Fresh.add id accu
+        | Constr.Var id -> add id accu
         | _ -> EConstr.fold sigma fold accu c
       in
-      fold Nameops.Fresh.empty c
+      fold empty c
   end
 
+  [%%if rocq >= (9, 1)]
   (* for backwards compat reasons the ocaml and ltac2 APIs
      exchange the meaning of "fresh" and "next" *)
   let next avoid id =
@@ -399,6 +476,10 @@ module Ltac2Fresh = struct
   let fresh avoid id =
     let id = Namegen.mangle_id id in
     Nameops.Fresh.next id avoid
+  [%%else]
+  let fresh avoid id =
+    Namegen.next_ident_away_from id (fun id -> Id.Set.mem id avoid)
+  [%%endif]
 end
 
 (** {2 Environment} *)
@@ -454,9 +535,15 @@ module Ltac2Ind = struct
 
   let nparams_uniform (_, mib) = mib.Declarations.mind_nparams_rec
 
+  [%%if rocq = (9, 2)]
+  let get_projections (ind,mib) =
+    Declareops.inductive_make_projections ind mib
+    |> Option.map (fun (x, _) -> Array.map (fun (p,_) -> Projection.make p false) x)
+  [%%else]
   let get_projections (ind,mib) =
     Declareops.inductive_make_projections ind mib
     |> Option.map (Array.map (fun (p,_) -> Projection.make p false))
+  [%%endif]
 
   let constructor_nargs ((_,i),mib) =
     let open Declarations in
@@ -485,6 +572,8 @@ module Ltac2Constructor = struct
   let print ctor =
     Nametab.pr_global_env Id.Set.empty (ConstructRef ctor)
 end
+
+[%%if rocq >= (9, 3)]
 
 (** {2 Schemes} *)
 
@@ -521,6 +610,7 @@ module Ltac2Scheme = struct
   let case_nodep = "case_nodep"
   let case_dep = "case_dep"
 end
+[%%endif]
 
 (** {2 Projection} *)
 
@@ -540,14 +630,22 @@ module Ltac2Proj = struct
 
   let to_constant p = Some (Projection.repr p)
 
+  [%%if rocq > (9, 2)]
   let print p =
     Nametab.pr_global_env
       Id.Set.empty
       (ConstRef (Environ.projection_repr_constant (Global.env ()) (Projection.repr p)))
+  [%%else]
+  let print p =
+    Nametab.pr_global_env
+      Id.Set.empty
+      (ConstRef (Projection.constant p))
+  [%%endif]
 end
 
 (** {2 Module} *)
 
+[%%if rocq >= (9, 2)]
 module Ltac2Module = struct
   type t = ModPath.t
   let equal = ModPath.equal
@@ -694,9 +792,11 @@ module Ltac2Module = struct
     in
     Option.map (List.map to_field) body
 end
+[%%endif]
 
 (** {2 Rewriting} *)
 
+[%%if rocq >= (9, 1)]
 module Ltac2Rewrite = struct
   module Strategy = struct
     type t = Rewrite.strategy
@@ -725,19 +825,23 @@ module Ltac2Rewrite = struct
     let lemmas       = Tac2tactics.RewriteStrats.lemmas
     let fold         = Rewrite.Strategies.fold
     let eval         = Rewrite.Strategies.reduce
+    [%%if rocq >= (9, 3)]
     let matches      = Rewrite.Strategies.matches
+    [%%endif]
 
+    [%%if rocq >= (9, 3)]
     let tactic = Tac2tactics.wrap_tactic_call
+    [%%endif]
   end
 
   let rewrite_strat ?in_hyp s = Tac2tactics.rewrite_strat s in_hyp
 end
+[%%endif]
 
 (** {2 Transparent state} *)
 
 module Ltac2TransparentState = struct
   type t = TransparentState.t
-  type strategy_level = Conv_oracle.level
 
   open TransparentState
 
@@ -794,7 +898,10 @@ module Ltac2TransparentState = struct
   let mem_proj p ts = PRpred.mem (Projection.repr p) ts.tr_prj
   let mem_var v ts = Id.Pred.mem v ts.tr_var
 
+  [%%if rocq >= (9, 3)]
+  type strategy_level = Conv_oracle.level
   let with_strategy level grs tac = Tac2tactics.with_strategy level grs (fun () -> tac)
+  [%%endif]
 end
 
 (** {2 Unification} *)
@@ -821,7 +928,11 @@ module Ltac2Std = struct
   type clause = Tac2types.clause
   type reference = GlobRef.t
   type strength = Genredexpr.strength
+  [%%if rocq >= (9, 2)]
   type red_flags = Tac2types.red_flag
+  [%%else]
+  type red_flags = reference Genredexpr.glob_red_flag
+  [%%endif]
   type intro_pattern = Tac2types.intro_pattern
   and intro_pattern_naming = Tac2types.intro_pattern_naming
   and intro_pattern_action = Tac2types.intro_pattern_action
@@ -843,7 +954,7 @@ module Ltac2Std = struct
   let intros ?(e = false) ?(patterns = []) () = Tac2tactics.intros_patterns e patterns
 
   let apply ?(e = false) ?in_hyp_as bindings =
-    let bindings = List.map (fun c -> fun () -> return c) bindings in
+    let bindings = List.map (thunk Tac2extffi.constr_with_bindings) bindings in
     Tac2tactics.apply true e bindings in_hyp_as
 
   let elim ?(e = false) ?using c = Tac2tactics.elim e c using
@@ -876,6 +987,7 @@ module Ltac2Std = struct
 
   let exfalso = Tactics.exfalso
 
+  [%%if rocq >= (9, 1)]
   module Red = struct
     type t = Redexpr.red_expr
 
@@ -895,13 +1007,14 @@ module Ltac2Std = struct
 
   let eval_in = Tac2tactics.reduce_in
   let eval = Tac2tactics.reduce_constr
+  [%%endif]
 
   let change ?pattern ?(where = default_on_conclusion) f =
+    let f = to_fun1' Tac2ffi.(array constr) Tac2ffi.constr f in
     Tac2tactics.change pattern f where
 
   let rewrite ?(e = false) ?(where = default_on_conclusion) ?by rewrites =
-    (* Thunk the tactic. *)
-    let by = Option.map (fun by -> fun () -> by) by in
+    let by = Option.map (thunk' Tac2ffi.unit) by in
     Tac2tactics.rewrite e rewrites where by
 
   let setoid_rewrite ?(ltr = true) ?in_hyp t where = Tac2tactics.setoid_rewrite ltr (return t) where in_hyp
@@ -945,8 +1058,13 @@ module Ltac2Std = struct
   let revert = Generalize.revert
   let admit = Proofview.give_up
 
+  [%%if rocq >= (9, 2)]
   let fix = FixTactics.fix
   let cofix = FixTactics.cofix
+  [%%else]
+  let fix = Tactics.fix
+  let cofix = Tactics.cofix
+  [%%endif]
 
   let clear = Tactics.clear
   let keep = Tactics.keep
@@ -959,8 +1077,7 @@ module Ltac2Std = struct
   let contradiction ?witness () = Tac2tactics.contradiction witness
 
   let autorewrite ~all ?(where = default_on_conclusion) ?using dbs =
-    (* Thunk the tactic *)
-    let using = Option.map (fun using -> fun () -> using) using in
+    let using = Option.map (thunk' Tac2ffi.unit) using in
     Tac2tactics.autorewrite ~all using dbs where
 
   let subst ?hyps () =
@@ -983,7 +1100,11 @@ module Ltac2Std = struct
   let congruence ?n ?hints () = Tac2tactics.congruence n hints
   let simple_congruence ?n ?hints () = Tac2tactics.simple_congruence n hints
 
+  [%%if rocq >= (9, 1)]
   let f_equal = Tac2tactics.f_equal
+  [%%else]
+  let f_equal = Cc_core_plugin.Cctac.f_equal
+  [%%endif]
 end
 
 (** {1 Ltac2 API} *)
@@ -1017,11 +1138,17 @@ module Fresh            = Ltac2Fresh
 module Ident            = Ltac2Ident
 module Ind              = Ltac2Ind
 module Message          = Ltac2Message
+[%%if rocq >= (9, 2)]
 module Module           = Ltac2Module
+[%%endif]
 module Pattern          = Ltac2Pattern
 module Proj             = Ltac2Proj
+[%%if rocq >= (9, 1)]
 module Rewrite          = Ltac2Rewrite
+[%%endif]
+[%%if rocq >= (9, 3)]
 module Scheme           = Ltac2Scheme
+[%%endif]
 module Std              = Ltac2Std
 module TransparentState = Ltac2TransparentState
 module Unification      = Ltac2Unification

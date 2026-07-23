@@ -1,5 +1,6 @@
 (library
  (name mltac2)
  (public_name mltac2)
- (libraries
-   rocq-runtime.plugins.ltac2))
+ (libraries rocq-runtime.plugins.ltac2)
+ ;; LATER: Replace coq: by rocq: once Dune >= 3.21
+ (preprocess (pps ppx_optcomp -- -cookie "ppx_optcomp.env=env ~rocq:(Defined (%{coq:version.major}, %{coq:version.minor}))")))

@@ -7,12 +7,12 @@ license: "LGPL-2.1-only"
 homepage: "https://github.com/epfl-systemf/mltac2"
 bug-reports: "https://github.com/epfl-systemf/mltac2/issues"
 depends: [
-  "dune" {>= "3.21"}
-  "rocq-runtime"
+  "dune" {>= "3.17"}
+  "coq-core" {>= "9.0"}
+  "ppx_optcomp"
   "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst"] {dev}
   [
     "dune"
     "build"
@@ -26,4 +26,3 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/epfl-systemf/mltac2.git"
-x-maintenance-intent: ["(latest)"]
