@@ -102,10 +102,10 @@ module Constr : sig
   (** Low-level access to kernel terms. Use with care! *)
   module Unsafe : sig
 
-    val kind : Evd.evar_map -> t -> (t, t, Evd.esorts, Evd.einstance, Evd.erelevance) Constr.kind_of_term
+    val kind : Evd.evar_map -> t -> (t, t, EConstr.ESorts.t, EConstr.EInstance.t, EConstr.ERelevance.t) Constr.kind_of_term
     (** [kind sigma t] returns the kind view of [t]. *)
 
-    val make : (t, t, Evd.esorts, Evd.einstance, Evd.erelevance) Constr.kind_of_term -> t
+    val make : (t, t, EConstr.ESorts.t, EConstr.EInstance.t, EConstr.ERelevance.t) Constr.kind_of_term -> t
     (** [make kind] constructs a term from the given kind. *)
 
     val check : Environ.env -> Evd.evar_map -> t -> Evd.evar_map * t
@@ -432,7 +432,7 @@ end
 
 module Fresh : sig
   module Free : sig
-    type t = Nameops.Fresh.t
+    type t
     (** Type of sets of free variables. *)
 
     val empty : t
@@ -455,10 +455,13 @@ module Fresh : sig
   (** [fresh free id] generates a fresh identifier with the given base name
       which is not a member of [free]. *)
 
+  [%%if rocq >= (9, 1)]
   val next : Free.t -> ident -> ident * Free.t
   (** [next free id] generates a fresh identifier with the given base name which
       is not a member of [free], and returns the updated set. More efficient
       than composing [fresh] and [Free.add]. *)
+
+  [%%endif]
 end
 
 (** {2 Identifiers} *)
@@ -585,6 +588,7 @@ module Message : sig
   (** [of_lconstr env sigma t] prints [t] at level 200 (no surrounding
       parentheses). *)
 
+  [%%if rocq >= (9, 2)]
   val of_preterm : Environ.env -> Evd.evar_map -> preterm -> message
   (** [of_preterm env sigma t] prints [t] at level 8 (surrounding with
       parentheses to print syntax above that level such as applications). *)
@@ -596,6 +600,8 @@ module Message : sig
   val of_exninfo : exninfo -> message
   (** [of_exninfo exninfo] prints the (Ltac2 and OCaml) backtrace info if it was
       recorded. *)
+
+  [%%endif]
 
   val concat : message -> message -> message
   (** [concat m1 m2] concats two messages. *)
@@ -639,49 +645,74 @@ end
 
 (** {2 Module} *)
 
+[%%if rocq >= (9, 2)]
 module Module : sig
   type t = ModPath.t
   (** The name of a module or module type. It may be a functor. It may also be
-      currently open. *)
+      currently open.
+
+      @since 9.2 *)
 
   val equal : t -> t -> bool
-  (** [equal m1 m2] tests equality of module names. *)
+  (** [equal m1 m2] tests equality of module names.
+
+      @since 9.2 *)
 
   val to_message : t -> message
-  (** [to_message m] prints a module name. *)
+  (** [to_message m] prints a module name.
+
+      @since 9.2 *)
 
   val is_modtype : Environ.env -> t -> bool
-  (** [is_modtype env m] returns [true] if [m] is a module type or module type functor. *)
+  (** [is_modtype env m] returns [true] if [m] is a module type or module type functor.
+
+      @since 9.2 *)
 
   val is_functor : Environ.env -> t -> bool
-  (** [is_modtype env m] returns [true] if [m] is a module functor or module type functor. *)
+  (** [is_functor env m] returns [true] if [m] is a module functor or module type functor.
+
+      @since 9.2 *)
 
   val is_bound_module : t -> bool
   (** [is_bound_module m] returns [true] for modules which are arguments of a
-      currently open functor ([false] for submodules of bound modules). *)
+      currently open functor ([false] for submodules of bound modules).
+
+      @since 9.2 *)
 
   val is_library : t -> bool
-  (** [is_library m] returns [true] for modules which are libraries (i.e. files). *)
+  (** [is_library m] returns [true] for modules which are libraries (i.e. files).
+
+      @since 9.2 *)
 
   val is_open : t -> bool
   (** [is_open m] returns [true] if [m] refers to a currently open interactive
-      module (or module type or functor). *)
+      module (or module type or functor).
+
+      @since 9.2 *)
 
   val parent_module : t -> t option
   (** [parent_module m] returns the parent module, i.e., [A] for [A.B]. Toplevel
-      modules (libraries) and bound modules (functor arguments) return None. *)
+      modules (libraries) and bound modules (functor arguments) return [None].
+
+      @since 9.2 *)
 
   val module_of_reference : GlobRef.t -> t
   (** [module_of_reference ref] returns the module of the reference.
 
-      Throws if [ref] is a [VarRef]. *)
+      Throws if [ref] is a [VarRef].
+
+      @since 9.2 *)
 
   val current_module : unit -> t
   (** [current_module ()] returns a reference to the current innermost open
-      interactive module. *)
+      interactive module.
+
+      @since 9.2 *)
 
   val loaded_libraries : unit -> t list
-  (** [loaded_libraries ()] returns the list of loaded library modules. *)
+  (** [loaded_libraries ()] returns the list of loaded library modules.
+
+      @since 9.2 *)
 
   module Field : sig
     type t = Tac2ffi.ModField.t
@@ -690,8 +721,11 @@ module Module : sig
   val contents : t -> Field.t list option
   (** [contents m] returns the contents of the given module ([None] on closed
       functors and module types). Inductives are represented only by the first
-      inductive of each mutual block (and no constructors). *)
+      inductive of each mutual block (and no constructors).
+
+      @since 9.2 *)
 end
+[%%endif]
 
 (** {2 Pattern} *)
 
@@ -782,6 +816,7 @@ end
 
 (** {2 Rewriting} *)
 
+[%%if rocq >= (9, 1)]
 module Rewrite : sig
 
   (** Module for rewrite strategies used by [rewrite_strat]. *)
@@ -900,111 +935,173 @@ module Rewrite : sig
 
   val rewrite_strat : ?in_hyp:ident -> Strategy.t -> unit Proofview.tactic
   (** Runs rewrite strategy on the type of a hypothesis or the goal if the
-      [in_hyp] is [None]. *)
-end
+      [in_hyp] is [None].
 
-[%%if rocq >= (9, 3)]
+      @since 9.1 *)
+end
+[%%endif]
 
 (** {2 Schemes} *)
 
+[%%if rocq >= (9, 3)]
 module Scheme : sig
   type kind
   (** An abstract type representing a scheme kind. Use the predefined values
-      below to refer to specific scheme kinds. *)
+      below to refer to specific scheme kinds.
+
+      @since 9.3 *)
 
   val lookup : kind -> GlobRef.t -> GlobRef.t option
   (** [lookup kind ref] looks up the scheme registered under [kind] for the
       reference [ref]. Returns [None] if [ref] is not an inductive type or if no such
-      scheme is registered. *)
+      scheme is registered.
+
+      @since 9.3 *)
 
   (** {3 Elimination schemes} *)
 
   val rect_dep : kind
-  (** Dependent recursion scheme for Type. *)
+  (** Dependent recursion scheme for Type.
+
+      @since 9.3 *)
 
   val rec_dep : kind
-  (** Dependent recursion scheme for Set. *)
+  (** Dependent recursion scheme for Set.
+
+      @since 9.3 *)
 
   val ind_dep : kind
-  (** Dependent induction scheme for Prop. *)
+  (** Dependent induction scheme for Prop.
+
+      @since 9.3 *)
 
   val sind_dep : kind
-  (** Dependent induction scheme for SProp. *)
+  (** Dependent induction scheme for SProp.
+
+      @since 9.3 *)
 
   val rect_nodep : kind
-  (** Non-dependent recursion scheme for Type. *)
+  (** Non-dependent recursion scheme for Type.
+
+      @since 9.3 *)
 
   val rec_nodep : kind
-  (** Non-dependent recursion scheme for Set. *)
+  (** Non-dependent recursion scheme for Set.
+
+      @since 9.3 *)
 
   val ind_nodep : kind
-  (** Non-dependent induction scheme for Prop. *)
+  (** Non-dependent induction scheme for Prop.
+
+      @since 9.3 *)
 
   val sind_nodep : kind
-  (** Non-dependent induction scheme for SProp. *)
+  (** Non-dependent induction scheme for SProp.
 
-  (** {3 Case analysis schemes} *)
+      @since 9.3 *)
+
+  (** {3 Case analysis schemes}
+
+      @since 9.3 *)
 
   val case_dep : kind
-  (** Dependent case analysis scheme for Type. *)
+  (** Dependent case analysis scheme for Type.
+
+      @since 9.3 *)
 
   val case_nodep : kind
-  (** Non-dependent case analysis scheme for Type. *)
+  (** Non-dependent case analysis scheme for Type.
+
+      @since 9.3 *)
 
   val casep_dep : kind
-  (** Dependent case analysis scheme for Prop. *)
+  (** Dependent case analysis scheme for Prop.
+
+      @since 9.3 *)
 
   val casep_nodep : kind
-  (** Non-dependent case analysis scheme for Prop. *)
+  (** Non-dependent case analysis scheme for Prop.
+
+      @since 9.3 *)
 
   val scase_nodep : kind
-  (** Dependent case analysis scheme for SProp. *)
+  (** Dependent case analysis scheme for SProp.
+
+      @since 9.3 *)
 
   val scase_dep : kind
-  (** Non-dependent case analysis scheme for SProp. *)
+  (** Non-dependent case analysis scheme for SProp.
+
+      @since 9.3 *)
 
   (** {3 Equality schemes} *)
 
   val sym : kind
-  (** Symmetry scheme. *)
+  (** Symmetry scheme.
+
+      @since 9.3 *)
 
   val sym_involutive : kind
-  (** Involutive symmetry scheme. *)
+  (** Involutive symmetry scheme.
+
+      @since 9.3 *)
 
   val rew : kind
-  (** Right-to-left rewriting scheme. *)
+  (** Right-to-left rewriting scheme.
+
+      @since 9.3 *)
 
   val rew_dep : kind
-  (** Right-to-left dependent rewriting scheme. *)
+  (** Right-to-left dependent rewriting scheme.
+
+      @since 9.3 *)
 
   val rew_fwd_dep : kind
-  (** Right-to-left forward dependent rewriting scheme. *)
+  (** Right-to-left forward dependent rewriting scheme.
+
+      @since 9.3 *)
 
   val rew_r : kind
-  (** Left-to-right rewriting scheme. *)
+  (** Left-to-right rewriting scheme.
+
+      @since 9.3 *)
 
   val rew_r_dep : kind
-  (** Left-to-right dependent rewriting scheme. *)
+  (** Left-to-right dependent rewriting scheme.
+
+      @since 9.3 *)
 
   val rew_fwd_r_dep : kind
-  (** Left-to-right forward dependent rewriting scheme. *)
+  (** Left-to-right forward dependent rewriting scheme.
+
+      @since 9.3 *)
 
   val congr : kind
-  (** Congruence scheme. *)
+  (** Congruence scheme.
+
+      @since 9.3 *)
 
   (** {3 Boolean equality and decidability schemes} *)
 
   val beq : kind
-  (** Boolean equality scheme. *)
+  (** Boolean equality scheme.
+
+      @since 9.3 *)
 
   val dec_bl : kind
-  (** Boolean to Leibniz equality scheme. *)
+  (** Boolean to Leibniz equality scheme.
+
+      @since 9.3 *)
 
   val dec_lb : kind
-  (** Leibniz to Boolean equality scheme. *)
+  (** Leibniz to Boolean equality scheme.
+
+      @since 9.3 *)
 
   val eq_dec : kind
-  (** Decidable equality scheme. *)
+(** Decidable equality scheme.
+
+    @since 9.3 *)
 end
 [%%endif]
 
@@ -1019,7 +1116,11 @@ module Std : sig
   type clause = Tac2types.clause
   type reference = GlobRef.t
   type strength = Genredexpr.strength
+  [%%if rocq >= (9, 2)]
   type red_flags = Tac2types.red_flag
+  [%%else]
+  type red_flags = reference Genredexpr.glob_red_flag
+  [%%endif]
   type intro_pattern = Tac2types.intro_pattern
   and intro_pattern_naming = Tac2types.intro_pattern_naming
   and intro_pattern_action = Tac2types.intro_pattern_action
@@ -1427,6 +1528,7 @@ module Std : sig
 
   (** {3 Applying conversion rules} *)
 
+  [%%if rocq >= (9, 1)]
   module Red : sig
     type t = Redexpr.red_expr
     (** Type representing a reduction expression. Red expressions describe
@@ -1521,6 +1623,8 @@ module Std : sig
       and returns the resulting term, without modifying the goal.
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.eval> Reference manual *)
+
+  [%%endif]
 
   (** {3 Reasoning with inductive types} *)
 

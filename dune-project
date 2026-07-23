@@ -20,5 +20,5 @@
  (name mltac2)
  (synopsis "Ltac2 APIs in OCaml")
  (depends
-   (coq-core (>= 9.2)) ;; Use coq-core to obtain coqc compatibility binaries
+   (coq-core (>= 9.0)) ;; Use coq-core to obtain coqc compatibility binaries
    ppx_optcomp))
