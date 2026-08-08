@@ -851,7 +851,7 @@ module Rewrite : sig
     val try_ : t -> t
     (** [try_ t] is equivalent to [choice t id]. *)
 
-    val fix_ : Tac2val.closure -> t tactic
+    val fix : (t -> t) -> t
     (** Fixed point operation for recursive strategies. [fix (fun f => s)]
         evaluates to [s [f / fix (fun f => s)]]. The function provided in the
         argument is executed only once when the strategy is constructed — it
