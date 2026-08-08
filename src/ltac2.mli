@@ -5,6 +5,7 @@
 
 open Names
 open Ltac2_plugin
+open Proofview
 
 (** {1 Built-in types} *)
 
@@ -253,23 +254,23 @@ module Control : sig
 
   (** {3 Generic backtracking control} *)
 
-  val throw : iexn -> 'a Proofview.tactic
+  val throw : iexn -> 'a tactic
   (** Fatal exception throwing. This does not induce backtracking. *)
 
-  val zero : iexn -> 'a Proofview.tactic
+  val zero : iexn -> 'a tactic
   (** [zero e] raises the exception [e], passing control to the current
       backtracking continuation. *)
 
-  val plus : 'a Proofview.tactic -> (iexn -> 'a Proofview.tactic) -> 'a Proofview.tactic
+  val plus : 'a tactic -> (iexn -> 'a tactic) -> 'a tactic
   (** Backtracking point. *)
 
-  val once : 'a Proofview.tactic -> 'a Proofview.tactic
+  val once : 'a tactic -> 'a tactic
   (** [once t] behaves like [t], except it has at most one success: [once t]
       stops after the first success of [t]. If [t] fails with [e], [once t] also
       fails with [e]. If [once t; t'] fails on [t'], then [once t] will not
       backtrack and evaluate [t] for another value, and will instead fail. *)
 
-  val case : 'a Proofview.tactic -> 'a Proofview.case Proofview.tactic
+  val case : 'a tactic -> 'a Proofview.case tactic
   (** [case] is the most general primitive to control backtracking:
 
       - If [t] would fail with [e], [case t] returns [Fail e].
@@ -284,10 +285,10 @@ module Control : sig
 
   (** {3 Proof state manipulation} *)
 
-  val numgoals : int Proofview.tactic
+  val numgoals : int tactic
   (** [numgoals] returns the number of goals currently focused. *)
 
-  val dispatch : unit Proofview.tactic list -> unit Proofview.tactic
+  val dispatch : unit tactic list -> unit tactic
   (** [dispatch] is used to apply a different tactic to each goal under
       focus. It works by applying each of the tactics in a focus restricted to
       the corresponding goal (starting with the first goal).
@@ -295,7 +296,7 @@ module Control : sig
       Fails when the length of the tactic list is not equal to the
       number of focused goals. *)
 
-  val extend : unit Proofview.tactic list -> unit Proofview.tactic -> unit Proofview.tactic list -> unit Proofview.tactic
+  val extend : unit tactic list -> unit tactic -> unit tactic list -> unit tactic
   (** [extend] is a more flexible variant of dispatch, where the second argument
       tactic is "repeated" enough times such that every goal has a tactic
       assigned to it. [extend b e r] applies the tactics in [b] to the first
@@ -305,10 +306,10 @@ module Control : sig
       Fails if [length b + length r] is greater than the number of goals under
       focus. *)
 
-  val enter : unit Proofview.tactic -> unit Proofview.tactic
+  val enter : unit tactic -> unit tactic
   (** [enter t] applies [t] in each goal under focus independently. *)
 
-  val focus : int -> int -> 'a Proofview.tactic -> 'a Proofview.tactic
+  val focus : int -> int -> 'a tactic -> 'a tactic
   (** [focus i j t] focuses a proofview on the goals from index [i] to index
       [j] (inclusive, goals are indexed from 1) and runs [t] with those goals under
       focus, i.e. goals number [i] to [j] become the only focused goals during the
@@ -316,43 +317,43 @@ module Control : sig
 
       If the range [i]–[j] is invalid, fails with a backtrackable "no such goal" error. *)
 
-  val shelve : unit Proofview.tactic
+  val shelve : unit tactic
   (** Shelve all goals under focus. The goals are placed on the shelf for later
       use, or to be solved by side-effects. *)
 
-  val shelve_unifiable : unit Proofview.tactic
+  val shelve_unifiable : unit tactic
   (** Shelves the unifiable goals under focus, i.e. the goals which appear in
       other goals under focus (the unfocused goals are not considered). *)
 
-  val unshelve : 'a Proofview.tactic -> 'a Proofview.tactic
+  val unshelve : 'a tactic -> 'a tactic
   (** [unshelve t] runs [t] and unshelves existential variables added to the
       shelf by its execution, prepending them to the current goal. Returns the
       value produced by [t]. *)
 
-  val new_goal : evar -> unit Proofview.tactic
+  val new_goal : evar -> unit tactic
   (** Adds the given evar to the list of goals as the last one. If it is already
       defined in the current state, don't do anything.
 
       Panics if the evar is not in the current state. *)
 
-  val reorder_goals : int list -> unit Proofview.tactic
+  val reorder_goals : int list -> unit tactic
   (** [reorder_goals l] reorders the goals according to (1-indexed) list [l]:
       goal [i] after executing the tactic was goal [nth l (i-1)] before
       executing the tactic.
 
       Raises if [l] is not a permutation of ints from [1] to [numgoals]. *)
 
-  val cycle : int -> unit Proofview.tactic
+  val cycle : int -> unit tactic
   (** If [n] is positive, [cycle n] puts the [n] first goal last. If [n] is
       negative, then it puts the [n] last goals first. *)
 
-  val progress : 'a Proofview.tactic -> 'a Proofview.tactic
+  val progress : 'a tactic -> 'a tactic
   (** [progress t] checks the state of the proof after [t]. If it is identical
       to the state before, then [progress t] fails, otherwise it succeeds like [t]. *)
 
   (** {3 Goal inspection} *)
 
-  val goal : constr Proofview.tactic
+  val goal : constr tactic
   (** [goal] returns the conclusion of this goal.
 
       Fails if there is not exactly one goal under focus. *)
@@ -372,7 +373,7 @@ module Control : sig
 
   (** {3 Refinement} *)
 
-  val refine : (Evd.evar_map -> Evd.evar_map * constr) -> unit Proofview.tactic
+  val refine : (Evd.evar_map -> Evd.evar_map * constr) -> unit tactic
   (** [refine t] computes the type of [t] in the current goal environment and
       evar map, and unifies the type with the current goal. All unification
       variables produced while computing [t] not solved by this unification
@@ -380,27 +381,27 @@ module Control : sig
 
   (** {3 Evars} *)
 
-  val with_holes : 'a Proofview.tactic -> ('a -> 'b Proofview.tactic) -> 'b Proofview.tactic
+  val with_holes : 'a tactic -> ('a -> 'b tactic) -> 'b tactic
   (** [with_holes t f] evaluates [t], then applies [f] to the result, and fails
       if all evars generated by [t] have not been solved when [f] returns. *)
 
   (** {3 Timing} *)
 
-  val time : ?name:string -> 'a Proofview.tactic -> 'a Proofview.tactic
+  val time : ?name:string -> 'a tactic -> 'a tactic
   (** Displays the time taken by a tactic to evaluate. *)
 
-  val timeout : int -> 'a Proofview.tactic -> 'a Proofview.tactic
+  val timeout : int -> 'a tactic -> 'a tactic
   (** [timeout n t] runs [t] with a timeout of [n] seconds. *)
 
-  val timeoutf : float -> 'a Proofview.tactic -> 'a Proofview.tactic
+  val timeoutf : float -> 'a tactic -> 'a tactic
   (** [timeoutf f t] runs [t] with a timeout of [f] seconds. *)
 
   (** {3 Misc} *)
 
-  val abstract : ?name:ident -> unit Proofview.tactic -> unit Proofview.tactic
+  val abstract : ?name:ident -> unit tactic -> unit tactic
   (** Abstract a subgoal. *)
 
-  val check_interrupt : unit Proofview.tactic
+  val check_interrupt : unit tactic
   (** For internal use. *)
 
   val print_err : err -> message
@@ -742,7 +743,7 @@ module Pattern : sig
       returns the assignment of pattern variables, or [None] if pattern-matching
       failed. *)
 
-  val matches_subterm : pattern -> constr -> (context * Ltac_pretype.patvar_map) Proofview.tactic
+  val matches_subterm : pattern -> constr -> (context * Ltac_pretype.patvar_map) tactic
   (** [matches_subterm pattern t] returns a stream of results corresponding to
       all of the subterms of [t] that matches [pattern] as in [matches], in the
       current goal. The stream is encoded as a backtracking value whose last
@@ -754,7 +755,7 @@ module Pattern : sig
     ?reverse:bool ->
     Tac2match.match_context_hyps list ->
     Tac2match.match_pattern ->
-    ((ident * context option option * context option) list * context option * Ltac_pretype.patvar_map) Proofview.tactic
+    ((ident * context option option * context option) list * context option * Ltac_pretype.patvar_map) tactic
   (** Given a list of patterns [hpats] for hypotheses and one pattern [cpat] for
       the conclusion, [matches_goal ?reverse hpats cpat] produces (a stream of):
 
@@ -850,7 +851,7 @@ module Rewrite : sig
     val try_ : t -> t
     (** [try_ t] is equivalent to [choice t id]. *)
 
-    val fix_ : Tac2val.closure -> t Proofview.tactic
+    val fix_ : Tac2val.closure -> t tactic
     (** Fixed point operation for recursive strategies. [fix (fun f => s)]
         evaluates to [s [f / fix (fun f => s)]]. The function provided in the
         argument is executed only once when the strategy is constructed — it
@@ -910,7 +911,7 @@ module Rewrite : sig
 
         @since 9.3 *)
 
-    val tactic : (constr -> constr -> constr option -> Rewrite.Result.t Proofview.tactic) -> t
+    val tactic : (constr -> constr -> constr option -> Rewrite.Result.t tactic) -> t
     (** The [tactic f] strategy applies [f] to arguments [ty], [lhs] and [rel],
         where [lhs] is the subterm being rewritten, of type [ty], and an
         optional relation constraint [rel] is given.
@@ -933,7 +934,7 @@ module Rewrite : sig
     [%%endif]
   end
 
-  val rewrite_strat : ?in_hyp:ident -> Strategy.t -> unit Proofview.tactic
+  val rewrite_strat : ?in_hyp:ident -> Strategy.t -> unit tactic
   (** Runs rewrite strategy on the type of a hypothesis or the goal if the
       [in_hyp] is [None].
 
@@ -1138,7 +1139,7 @@ module Std : sig
 
   (** {3 Applying theorems} *)
 
-  val assumption : ?e:evar_flag -> unit -> unit Proofview.tactic
+  val assumption : ?e:evar_flag -> unit -> unit tactic
   (** [assumption ()] looks in the local context for a hypothesis whose type is
       convertible to the goal. If it is the case, the subgoal is proved. Otherwise,
       it fails.
@@ -1155,7 +1156,7 @@ module Std : sig
     ?e:evar_flag ->
     ?in_hyp_as:(ident * intro_pattern option) ->
     constr_with_bindings list ->
-    unit Proofview.tactic
+    unit tactic
   (** [apply ?e ts ?in_hyp_as] uses unification to match the type of each [t] with the goal
       (to do backward reasoning) or with a hypothesis (to do forward reasoning).
       Specifying multiple {!type:constr_with_bindings} is equivalent to giving each one
@@ -1177,7 +1178,7 @@ module Std : sig
     ?name:ident ->
     ?where:move_location ->
     unit ->
-    unit Proofview.tactic
+    unit tactic
   (** [intro ?name ?where ()] applies the {!val:hnf} tactic until it finds an item
       that can be introduced in the context by removing certain constructs in
       the goal. If no item is found, the tactic fails.
@@ -1198,7 +1199,7 @@ module Std : sig
     ?e:evar_flag ->
     ?patterns:intro_pattern list ->
     unit ->
-    unit Proofview.tactic
+    unit tactic
   (** [intros ?e ?patterns ()] introduces a list of new variables in the context
       using the [patterns]. If [patterns] is not specified, the tactic introduces
       items until it reaches the head constant; it never fails and may leave the context
@@ -1212,7 +1213,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.intros> Reference manual
    *)
 
-  val intros_until : hypothesis -> unit Proofview.tactic
+  val intros_until : hypothesis -> unit tactic
   (** [intros_until nat_or_hyp] repeats [intro] until it has introduced a dependent premise
       with the given name, or has introduced the given number of premises.
 
@@ -1221,21 +1222,21 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.intros-until> Reference manual
    *)
 
-  val revert : ident list -> unit Proofview.tactic
+  val revert : ident list -> unit tactic
   (** [revert hyps] moves the specified hypotheses and local definitions to the
       goal, if this respects dependencies. This is the inverse of [intro].
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.revert> Reference manual
    *)
 
-  val move : ident -> move_location -> unit Proofview.tactic
+  val move : ident -> move_location -> unit tactic
   (** [move hyp where] moves a hypothesis and hypothesis that directly or directly refer to
       [hyp] that appear between [hyp] and [where].
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.move> Reference manual
    *)
 
-  val clear : ident list -> unit Proofview.tactic
+  val clear : ident list -> unit tactic
   (** [clear hyps] erases unneeded hypotheses in [hyps] from the context of the
       current goal. "Unneeded" means that the unselected hypotheses and the goal
       don't refer directly or indirectly to the erased hypotheses. That means the
@@ -1246,24 +1247,24 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.clear> Reference manual
    *)
 
-  val keep : ident list -> unit Proofview.tactic
+  val keep : ident list -> unit tactic
   (** [keep hyps] is the converse of {!val:clear}, keeping only needed
       hypotheses in [hyps]. *)
 
-  val clearbody : ident list -> unit Proofview.tactic
+  val clearbody : ident list -> unit tactic
   (** [clearbody hyps] clears the body of the given [hyps] in the context of the
       current goal.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.clearbody> Reference manual
    *)
 
-  val rename : (ident * ident) list -> unit Proofview.tactic
+  val rename : (ident * ident) list -> unit tactic
   (** [rename l] simultaneously renames hypotheses from the first name to the second.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.rename> Reference manual
    *)
 
-  val set : ?e:evar_flag -> ?where:clause -> Name.t -> constr -> unit Proofview.tactic
+  val set : ?e:evar_flag -> ?where:clause -> Name.t -> constr -> unit tactic
   (** [set ?e name t ?where] adds a new local definition [name := t] and replaces
       the body expression with the new variable [name] in the goal, or as specified
       by [where].
@@ -1283,7 +1284,7 @@ module Std : sig
     ?eqn:intro_pattern_naming ->
     ?where:clause ->
     constr ->
-    unit Proofview.tactic
+    unit tactic
   (** [remember ?e t ?as_name ?eqn ?where] is similar to [set ?e as_ t ?where]
       but creates a hypothesis using Leibniz equality to remember the relation
       between the introduced variable and the term rather than creating a local
@@ -1300,7 +1301,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.remember> Reference manual
    *)
 
-  val pose : Name.t -> constr -> unit Proofview.tactic
+  val pose : Name.t -> constr -> unit tactic
   (** [pose name t] is similar to [set name t], but does not perform any replacements.
 
       Note: this version of [pose] does not fail on uninstantiated existential variables.
@@ -1311,7 +1312,7 @@ module Std : sig
 
   (** {3 Controlling the proof flow} *)
 
-  val assert_ : assertion -> unit Proofview.tactic
+  val assert_ : assertion -> unit tactic
   (** [assert_ assertion] adds a new hypothesis to the current subgoal and a new subgoal
       before it to prove the hypothesis.
 
@@ -1321,14 +1322,14 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.assert> Reference manual
    *)
 
-  val enough : ?as_pattern:intro_pattern -> ?by:unit Proofview.tactic -> constr -> unit Proofview.tactic
+  val enough : ?as_pattern:intro_pattern -> ?by:unit tactic -> constr -> unit tactic
   (** [enough t ?as_pattern ?by] adds a new hypothesis to the current subgoal and a new subgoal
       after it to prove the hypothesis.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.enough> Reference manual
    *)
 
-  val cut : constr -> unit Proofview.tactic
+  val cut : constr -> unit tactic
   (** [cut P] transforms the current goal [G] into two subgoals: [P -> G]
       and [P]. This is the cut rule: to prove [G], it suffices to prove
       that [P] implies [G] and that [P] itself holds.
@@ -1337,14 +1338,14 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.cut> Reference manual *)
 
-  val specialize : ?as_pattern:intro_pattern -> constr_with_bindings -> unit Proofview.tactic
+  val specialize : ?as_pattern:intro_pattern -> constr_with_bindings -> unit tactic
   (** [specialize t ?as_pattern] specializes [t] (typically a hypothesis or
       lemma) by applying arguments to it.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.specialize> Reference manual
    *)
 
-  val generalize : (constr * occurrences * Name.t) list -> unit Proofview.tactic
+  val generalize : (constr * occurrences * Name.t) list -> unit tactic
   (** [generalize [(t, where, x)]] replaces the goal [G] with [forall (x: T), G'], where [t] is a subterm
       of [G] of type [T], and [G'] is obtained by replacing all occurrences of [t] with [x] within [G].
       Specifying multiple [t] is equivalent to [generalize t₁; …; generalize tₙ].
@@ -1352,7 +1353,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.generalize> Reference manual
    *)
 
-  val absurd : constr -> unit Proofview.tactic
+  val absurd : constr -> unit tactic
   (** [absurd P] applies [False] elimination, that is it deduces the current goal
       from [False], and generates as subgoals [~P] and [P]. It is very useful in
       proofs by cases, where some cases are impossible. In most cases, [P] or [∼P]
@@ -1361,7 +1362,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.absurd> Reference manual
    *)
 
-  val contradiction : ?witness:constr_with_bindings -> unit -> unit Proofview.tactic
+  val contradiction : ?witness:constr_with_bindings -> unit -> unit tactic
   (** [contradiction ?witness ()] tries to prove the current goal by finding a contradiction.
 
       If [witness] is not provided (the most common use case), the tactic first
@@ -1384,7 +1385,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.contradiction> Reference manual
    *)
 
-  val exfalso : unit Proofview.tactic
+  val exfalso : unit tactic
   (** Implements the “ex falso quodlibet” logical principle: an elimination of
       [False] is performed on the current goal, and the user is then required to prove
       that [False] is indeed provable in the current context.
@@ -1392,14 +1393,14 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.exfalso> Reference manual
    *)
 
-  val admit : unit Proofview.tactic
+  val admit : unit tactic
   (** Admits the current goal, axiomaticizing it. This marks the current
       goal as an axiom and closes it, leaving the proof incomplete. Useful
       for debugging or for temporarily accepting unprovable goals. *)
 
   (** {3 Performance-oriented tactic variants} *)
 
-  val exact_no_check : constr -> unit Proofview.tactic
+  val exact_no_check : constr -> unit tactic
   (** For advanced usage. [exact_no_check t] is similar to [exact t], but as an
       optimization, it skips checking that [t] has the goal's type, relying on
       the kernel check instead.
@@ -1407,7 +1408,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.exact_no_check> Reference manual
    *)
 
-  val vm_cast_no_check : constr -> unit Proofview.tactic
+  val vm_cast_no_check : constr -> unit tactic
   (** For advanced usage. [vm_no_check t] is similar to [exact_no_check t], but
       additionally instructs the kernel to use [vm_compute] to compare the
       goal's type with [t]'s type.
@@ -1415,7 +1416,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.vm_cast_no_check> Reference manual
    *)
 
-  val native_cast_no_check : constr -> unit Proofview.tactic
+  val native_cast_no_check : constr -> unit tactic
   (** For advanced usage. [native_cast_no_check t] is similar to [exact_no_check t],
       but additionally instructs the kernel to use [native_compute] to compare
       the goal's type with [t]'s type.
@@ -1427,7 +1428,7 @@ module Std : sig
 
   (** {4 Tactics for simple equalities} *)
 
-  val reflexivity : unit Proofview.tactic
+  val reflexivity : unit tactic
   (** After doing an [intros], if the resulting goal is in the form [t = u] in
       which [t] and [u] are definitionally equal, the tactic proves the goal (by
       applying [eq_refl]). If not, it fails.
@@ -1435,7 +1436,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.reflexivity> Reference manual
    *)
 
-  val symmetry : ?where:clause -> unit -> unit Proofview.tactic
+  val symmetry : ?where:clause -> unit -> unit tactic
   (** Changes a goal that has the form [forall x₀ … xₙ, t = u] into [u = t].
 
       @param where (default = [default_on_conclusion])
@@ -1445,20 +1446,20 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.symmetry> Reference manual
    *)
 
-  val transitivity : constr -> unit Proofview.tactic
+  val transitivity : constr -> unit tactic
   (** [transitivity x] changes a goal that has the form [forall x₀ … xₙ, t = u]
       into the two subgoals [t = x] and [x = u].
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.transitivity> Reference manual
    *)
 
-  val etransitivity : unit Proofview.tactic
+  val etransitivity : unit tactic
   (** [etransitivity] behaves like [transitivity], using a fresh evar instead of a concrete term.
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.etransitivity> Reference manual
    *)
 
-  val f_equal : unit Proofview.tactic
+  val f_equal : unit tactic
   (** For a goal with the form [f a₁ … aₙ = g b₁ … bₙ], creates subgoals [f = g]
       and [aᵢ = bᵢ] for the [n] arguments. Subgoals that can be proven by
       {!val:reflexivity} or {!val:congruence} are solved automatically.
@@ -1468,7 +1469,7 @@ module Std : sig
 
   (** {4 Rewriting with Leibniz and setoid equality} *)
 
-  val rewrite : ?e:evar_flag -> ?where:clause -> ?by:unit Proofview.tactic -> rewriting list -> unit Proofview.tactic
+  val rewrite : ?e:evar_flag -> ?where:clause -> ?by:unit tactic -> rewriting list -> unit tactic
   (** [rewrite rs ?e ?where ?by] replaces subterms with other subterms that have been proven to be equal
       or logically equivalent.
 
@@ -1479,7 +1480,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.rewrite> Reference manual
    *)
 
-  val setoid_rewrite : ?ltr:orientation -> ?in_hyp:ident -> constr_with_bindings -> occurrences -> unit Proofview.tactic
+  val setoid_rewrite : ?ltr:orientation -> ?in_hyp:ident -> constr_with_bindings -> occurrences -> unit tactic
   (** [setoid_rewrite ?ltr ?in_hyp c occs] rewrites an occurrence of the term
       matched by [c] in the goal or the specified hypothesis using a setoid
       equality. Unlike {!val:rewrite}, this tactic works with relations
@@ -1496,7 +1497,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/addendum/generalized-rewriting.html#rocq:tacn.setoid_rewrite> Reference manual
    *)
 
-  val subst : ?hyps:ident list -> unit -> unit Proofview.tactic
+  val subst : ?hyps:ident list -> unit -> unit tactic
   (** [subst ?hyps] substitutes each hypothesis [id : x = t] (or [t = x])
       in the goal, replacing [x] by [t] everywhere. Only hypotheses of
       the form [x = t] or [t = x] where [x] is a variable are considered.
@@ -1510,8 +1511,8 @@ module Std : sig
   val change :
     ?pattern:pattern ->
     ?where:clause ->
-    (constr array -> constr Proofview.tactic) ->
-    unit Proofview.tactic
+    (constr array -> constr tactic) ->
+    unit tactic
   (** [change ?pattern f cl] finds subterms matching [pattern] in the selected
       hypotheses and/or conclusion specified by [cl], and replaces them with
       [f args] where [args] are the matched subterms.
@@ -1545,7 +1546,7 @@ module Std : sig
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.hnf> Reference manual *)
 
-    val simpl : ?where:(pattern * occurrences) -> red_flags -> t Proofview.tactic
+    val simpl : ?where:(pattern * occurrences) -> red_flags -> t tactic
     (** [simpl ?where flags] reduces a term to something still readable instead of
         fully normalizing it. It performs a sort of strong normalization with two
         key differences:
@@ -1559,12 +1560,12 @@ module Std : sig
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.simpl> Reference manual *)
 
-    val cbv : red_flags -> t Proofview.tactic
+    val cbv : red_flags -> t tactic
     (** [cbv flags] normalize the goal as specified by [flags].
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.cbv> Reference manual *)
 
-    val cbn : red_flags -> t Proofview.tactic
+    val cbn : red_flags -> t tactic
     (** [cbn flags] was intended to be a more principled, faster and more
         predictable replacement for {!val:simpl}. The main difference is that
         [cbn] may unfold constants even when they cannot be reused in recursive
@@ -1572,14 +1573,14 @@ module Std : sig
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.cbn> Reference manual *)
 
-    val lazy_ : red_flags -> t Proofview.tactic
+    val lazy_ : red_flags -> t tactic
     (** [lazy_ flags] performs on-demand reduction using a lazy strategy,
         only reducing subterms that are needed for the goal, with the given
         reduction [flags].
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#applying-conversion-rules> Reference manual *)
 
-    val unfold : (reference * occurrences) list -> t Proofview.tactic
+    val unfold : (reference * occurrences) list -> t tactic
     (** [unfold refs] replaces each occurrence of the specified global
         references by their definitions in the goal.
 
@@ -1612,13 +1613,13 @@ module Std : sig
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.native_compute> Reference manual *)
   end
 
-  val eval_in : Red.t -> clause -> unit Proofview.tactic
+  val eval_in : Red.t -> clause -> unit tactic
   (** [eval_in red cl] performs the reduction specified by [red] in the
       selected hypotheses and/or conclusion specified by [cl].
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.eval> Reference manual *)
 
-  val eval : Red.t -> constr -> constr Proofview.tactic
+  val eval : Red.t -> constr -> constr tactic
   (** [eval red c] reduces the term [c] using the specified reduction [red]
       and returns the resulting term, without modifying the goal.
 
@@ -1630,7 +1631,7 @@ module Std : sig
 
   (** {4 Applying constructors} *)
 
-  val constructor : ?e:evar_flag -> ?n:int -> ?bindings:bindings -> unit -> unit Proofview.tactic
+  val constructor : ?e:evar_flag -> ?n:int -> ?bindings:bindings -> unit -> unit tactic
   (** [constructor ?e ?n ?bindings ()] applies the [n]-th constructor, if
       specified, or the first matching constructor to prove the current
       goal. Fails if no constructor applies.
@@ -1641,7 +1642,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.constructor> Reference manual *)
 
-  val split : ?e:evar_flag -> ?bindings:bindings -> unit -> unit Proofview.tactic
+  val split : ?e:evar_flag -> ?bindings:bindings -> unit -> unit tactic
   (** [split ?e ?bindings ()] proves a conjunction [A /\ B] or an iff [A <-> B]
       by splitting it into subgoals. For conjunction, the left conjunct
       becomes the first subgoal. Any bindings are applied to the constructor.
@@ -1652,7 +1653,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#applying-constructors> Reference manual *)
 
-  val left : ?e:evar_flag -> ?bindings:bindings -> unit -> unit Proofview.tactic
+  val left : ?e:evar_flag -> ?bindings:bindings -> unit -> unit tactic
   (** [left ?e ?bindings ()] proves a disjunctive goal [A \/ B] by selecting the
       left disjunct [A], generating a subgoal for [A]. Any bindings are
       applied to the constructor.
@@ -1663,7 +1664,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#applying-constructors> Reference manual *)
 
-  val right : ?e:evar_flag -> ?bindings:bindings -> unit -> unit Proofview.tactic
+  val right : ?e:evar_flag -> ?bindings:bindings -> unit -> unit tactic
   (** [right ?e ?bindings ()] proves a disjunctive goal [A \/ B] by selecting the
       right disjunct [B], generating a subgoal for [B]. Any bindings are
       applied to the constructor.
@@ -1676,7 +1677,7 @@ module Std : sig
 
   (** {4 Case analysis} *)
 
-  val destruct : ?e:evar_flag -> ?using:constr_with_bindings -> induction_clause list -> unit Proofview.tactic
+  val destruct : ?e:evar_flag -> ?using:constr_with_bindings -> induction_clause list -> unit tactic
   (** [destruct clauses ?e ?using] perform case analysis on each clause in
       [clauses], generating a subgoal for each of the constructors of the inductive type.
 
@@ -1690,7 +1691,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.destruct> Reference manual
    *)
 
-  val case : ?e:evar_flag -> constr_with_bindings -> unit Proofview.tactic
+  val case : ?e:evar_flag -> constr_with_bindings -> unit tactic
   (** [case c ?e] is an older, more basic tactic to perform case analysis
       without recursion. We recommend using {!val:destruct} instead where possible.
       [case] only modifies the goal; it does not modify the local context.
@@ -1704,7 +1705,7 @@ module Std : sig
 
   (** {4 Induction} *)
 
-  val induction : ?e:evar_flag -> ?using:constr_with_bindings -> induction_clause list -> unit Proofview.tactic
+  val induction : ?e:evar_flag -> ?using:constr_with_bindings -> induction_clause list -> unit tactic
   (** [induction clauses ?e ?using] applies induction principles to each clause in
       [clauses], left to right.
 
@@ -1718,7 +1719,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.induction> Reference manual
    *)
 
-  val elim : ?e:evar_flag -> ?using:constr_with_bindings -> constr_with_bindings -> unit Proofview.tactic
+  val elim : ?e:evar_flag -> ?using:constr_with_bindings -> constr_with_bindings -> unit tactic
   (** [elim c ?e ?using] is an older, more basic induction tactic. Unlike
       {!val:induction}, [elim] only modifies the goal; it does not modify the local
       context. We recommend using {!val:induction} instead where possible.
@@ -1733,21 +1734,21 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.elim> Reference manual
    *)
 
-  val fix : ident -> int -> unit Proofview.tactic
+  val fix : ident -> int -> unit tactic
   (** [fix f n] is a primitive tactic that starts a proof by
       induction. Generally, higher-level tactics such as {!val:induction} or {!val:elim} are
       easier to use.
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.fix> Reference manual *)
 
-  val cofix : ident -> unit Proofview.tactic
+  val cofix : ident -> unit tactic
   (** [cofix f] starts a proof by coinduction.
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.cofix> Reference manual *)
 
   (** {4 Equality of inductive types} *)
 
-  val discriminate : ?e:evar_flag -> ?arg:destruction_arg -> unit -> unit Proofview.tactic
+  val discriminate : ?e:evar_flag -> ?arg:destruction_arg -> unit -> unit tactic
   (** [discriminate ?e ?arg ()] proves the current goal by discriminating an
       equality between two constructors of the same inductive type. The
       argument [arg] specifies which hypothesis or term to discriminate.
@@ -1762,7 +1763,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.discriminate> Reference manual *)
 
-  val injection : ?e:evar_flag -> ?arg:destruction_arg -> ?as_patterns:intro_pattern list -> unit -> unit Proofview.tactic
+  val injection : ?e:evar_flag -> ?arg:destruction_arg -> ?as_patterns:intro_pattern list -> unit -> unit tactic
   (** [injection () ?e ?ipat ?arg] exploits the property that constructors of
       inductive types are injective, i.e. that if [c] is a constructor of an inductive
       type and [c t1 = c t2] then [t1 = t2] are equal too.
@@ -1786,7 +1787,7 @@ module Std : sig
     ?as_pattern:intro_pattern ->
     ?in_hyps:ident list ->
     destruction_arg ->
-    unit Proofview.tactic
+    unit tactic
   (** [inversion ?kind arg ?as_pattern ?ids] performs inversion on the given term
       [arg] using the specified [kind] of inversion. Inversion generates
       equations for all constructors of the inductive type of [arg] and
@@ -1807,7 +1808,7 @@ module Std : sig
 
   (** {3 Solvers for logic and equality} *)
 
-  val congruence : ?n:int -> ?hints:constr list -> unit -> unit Proofview.tactic
+  val congruence : ?n:int -> ?hints:constr list -> unit -> unit tactic
   (** [congruence () ?n ?hints] solves the current goal using the congruence
       closure algorithm, which reasons about equations between constructors and
       function applications.
@@ -1820,7 +1821,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/automatic-tactics/logic.html> Reference manual *)
 
-  val simple_congruence : ?n:int -> ?hints:constr list -> unit -> unit Proofview.tactic
+  val simple_congruence : ?n:int -> ?hints:constr list -> unit -> unit tactic
   (** [simple_congruence () ?n ?hints] behaves like {!val:congruence} but does not unfold definitions.
 
       @param n (default = [None])
@@ -1836,7 +1837,7 @@ module Std : sig
   type debug = Hints.debug
   type strategy = Class_tactics.search_strategy
 
-  val auto : ?debug:debug -> ?n:int -> ?dbs:ident list -> reference list -> unit Proofview.tactic
+  val auto : ?debug:debug -> ?n:int -> ?dbs:ident list -> reference list -> unit tactic
   (** [auto refs ?debug ?n ?dbs] applies the auto proof search algorithm with
       backtracking, which tries to solve the goal by applying hints from the
       specified databases.
@@ -1858,7 +1859,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/automatic-tactics/auto.html> Reference manual *)
 
-  val eauto : ?debug:debug -> ?n:int -> ?dbs:ident list -> reference list -> unit Proofview.tactic
+  val eauto : ?debug:debug -> ?n:int -> ?dbs:ident list -> reference list -> unit tactic
   (** [eauto refs ?debug ?n ?dbs] applies the eauto proof search algorithm,
       which extends auto with unification hints and e-unification.
 
@@ -1879,7 +1880,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/automatic-tactics/auto.html> Reference manual *)
 
-  val typeclasses_eauto : ?strategy:strategy -> ?n:int -> ?dbs:ident list -> unit -> unit Proofview.tactic
+  val typeclasses_eauto : ?strategy:strategy -> ?n:int -> ?dbs:ident list -> unit -> unit tactic
   (** [typeclasses_eauto ?strategy ?n ?dbs ()] applies typeclass resolution using
       the specified search [strategy]. Typeclass resolution is a form of
       automated proof search specialized for typeclass instance resolution.
@@ -1897,7 +1898,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/language/extensions/evars.html#typeclasses-eauto> Reference manual *)
 
-  val autorewrite : all:bool -> ?where:clause -> ?using:unit Proofview.tactic -> ident list -> unit Proofview.tactic
+  val autorewrite : all:bool -> ?where:clause -> ?using:unit tactic -> ident list -> unit tactic
   (** [autorewrite ~all ?where ?using dbs] rewrites in the goal using the rewrite
       rules registered in the specified hint databases [dbs].
 
@@ -1913,7 +1914,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/addendum/generalized-rewriting.html> Reference manual *)
 
-  val trivial : ?debug:debug -> ?dbs:ident list -> reference list -> unit Proofview.tactic
+  val trivial : ?debug:debug -> ?dbs:ident list -> reference list -> unit tactic
   (** [trivial refs ?debug ?dbs] behaves like {!val:auto}, but is not recursive
       and only tries hints with zero cost. Typically used to solve goals for which a
       lemma is already available in the specified hintbases.
@@ -1934,14 +1935,14 @@ module Std : sig
 
   (** {3 Misc} *)
 
-  val resolve_tc : constr -> unit Proofview.tactic
+  val resolve_tc : constr -> unit tactic
   (** [resolve_tc c] resolves the existential variables appearing in the constr
       whose types are typeclasses. Fail if any of them cannot be resolved. Does
       not focus.
 
       @see <https://rocq-prover.org/doc/master/refman/language/extensions/evars.html#typeclasses-eauto> Reference manual *)
 
-  val unify : constr -> constr -> unit Proofview.tactic
+  val unify : constr -> constr -> unit tactic
   (** [unify x y] checks that [x] and [y] are convertible (definitionally
       equal) in the current context. Fails if they are not unifiable.
 
@@ -1961,7 +1962,7 @@ module TransparentState : sig
   val full : t
   (** [full] is the full transparency state (all constants are transparent).  *)
 
-  val current : unit -> t Proofview.tactic
+  val current : unit -> t tactic
   (** [current ()] gives the transparency state of the goal, which is influenced
       by, e.g., the [Strategy] command, or the [with_strategy] tactic. *)
 
@@ -2024,7 +2025,7 @@ module TransparentState : sig
       - [Level n] corresponds to integer level [n] (where [Level 0] is
         transparent). *)
 
-  val with_strategy : strategy_level -> GlobRef.t list -> 'a Proofview.tactic -> 'a Proofview.tactic
+  val with_strategy : strategy_level -> GlobRef.t list -> 'a tactic -> 'a tactic
   (** [with_strategy lvl refs tac] temporarily sets the strategy level of all
       references in [refs] to [lvl], executes [tac], and then restores the
       original strategy levels. This is the Ltac2 analogue of the
@@ -2053,11 +2054,11 @@ module Unification : sig
       - [flag] which controls if conversion is done up to cumulativity or not.
       - [ts] which controls which constants get unfolded during conversion. *)
 
-  val unify : TransparentState.t -> constr -> constr -> unit Proofview.tactic
+  val unify : TransparentState.t -> constr -> constr -> unit tactic
   (** [unify ts c1 c2] unifies [c1] and [c2] (using Evarconv unification), which
       may have the effect of instantiating evars. If [c1] and [c2] cannot be
       unified, the tactic fails. *)
 
-  val solve_constraints : unit Proofview.tactic
+  val solve_constraints : unit tactic
   (** [solve_constraints] solves any delayed unification constraints. *)
 end
