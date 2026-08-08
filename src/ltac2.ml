@@ -944,7 +944,6 @@ module Ltac2Std = struct
   type orientation = Tac2types.orientation
   type rewriting = Tac2types.rewriting
   type evar_flag = Tac2types.evars_flag
-  type advanced_flag = Tac2types.advanced_flag
   type move_location = Id.t Logic.move_location
   type inversion_kind = Inv.inversion_kind
 
