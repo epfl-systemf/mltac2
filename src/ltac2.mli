@@ -1151,11 +1151,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.assumption> Reference manual
    *)
 
-  val apply :
-    ?e:evar_flag ->
-    ?in_hyp_as:(ident * intro_pattern option) ->
-    constr_with_bindings list ->
-    unit tactic
+  val apply : ?e:evar_flag -> ?in_hyp_as:(ident * intro_pattern option) -> constr_with_bindings list -> unit tactic
   (** [apply ?e ts ?in_hyp_as] uses unification to match the type of each [t] with the goal
       (to do backward reasoning) or with a hypothesis (to do forward reasoning).
       Specifying multiple {!type:constr_with_bindings} is equivalent to giving each one
@@ -1173,14 +1169,9 @@ module Std : sig
 
   (** {3 Managing the local context} *)
 
-  val intro :
-    ?name:ident ->
-    ?where:move_location ->
-    unit ->
-    unit tactic
-  (** [intro ?name ?where ()] applies the {!val:hnf} tactic until it finds an item
-      that can be introduced in the context by removing certain constructs in
-      the goal. If no item is found, the tactic fails.
+  val intro : ?name:ident -> ?where:move_location -> unit -> unit tactic
+  (** [intro ?name ?where ()] introduces an item in the context by removing
+      certain constructs in the goal. If no item is found, the tactic fails.
 
       @param name (default = [None])
         The name to give to the introduced item. If not given, Rocq uses the
@@ -1194,15 +1185,11 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.intro> Reference manual *)
 
-  val intros :
-    ?e:evar_flag ->
-    ?patterns:intro_pattern list ->
-    unit ->
-    unit tactic
+  val intros : ?e:evar_flag -> ?patterns:intro_pattern list -> unit -> unit tactic
   (** [intros ?e ?patterns ()] introduces a list of new variables in the context
-      using the [patterns]. If [patterns] is not specified, the tactic introduces
-      items until it reaches the head constant; it never fails and may leave the context
-      unchanged.
+      using the [patterns]. If [patterns] is not specified, the tactic
+      introduces items until it reaches the head constant; it never fails and
+      may leave the context unchanged.
 
       @param e (default = [false])
         If [true], an existential variable is created for any unresolved
@@ -1213,23 +1200,25 @@ module Std : sig
    *)
 
   val intros_until : hypothesis -> unit tactic
-  (** [intros_until nat_or_hyp] repeats [intro] until it has introduced a dependent premise
-      with the given name, or has introduced the given number of premises.
+  (** [intros_until nat_or_hyp] repeats [intro] until it has introduced a
+      dependent premise with the given name, or has introduced the given number
+      of premises.
 
-      We recommend explicitly naming items with [intros] instead of using [intros_until (AnonHyp n)].
+      We recommend explicitly naming items with [intros] instead of using
+      [intros_until (AnonHyp n)].
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.intros-until> Reference manual
    *)
 
   val revert : ident list -> unit tactic
   (** [revert hyps] moves the specified hypotheses and local definitions to the
-      goal, if this respects dependencies. This is the inverse of [intro].
+      goal, if this respects dependencies. This is the inverse of {!val:intros}.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.revert> Reference manual
    *)
 
   val move : ident -> move_location -> unit tactic
-  (** [move hyp where] moves a hypothesis and hypothesis that directly or directly refer to
+  (** [move hyp where] moves [hyp] and hypotheses that directly or directly refer to
       [hyp] that appear between [hyp] and [where].
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.move> Reference manual
@@ -1365,13 +1354,13 @@ module Std : sig
   (** [contradiction ?witness ()] tries to prove the current goal by finding a contradiction.
 
       If [witness] is not provided (the most common use case), the tactic first
-      does an [intros]. The tactic then proves the goal if
+      does an {!val:intros}. The tactic then proves the goal if
 
       - The updated context has a pair of hypotheses where one is the negation
         of the other (e.g. [P] and not [~P]), or
       - There is a hypothesis with an empty inductive type (e.g. [False]), or
       - There is a hypothesis [~P] where [P] is a singleton inductive type
-        (e.g. [True] or [x=x]) provable by [Goal P. constructor.]
+        (e.g. [True] or [x=x]) provable by {!val:constructor}.
 
       @param witness (default = [None])
         If [witness] is provided, its type must be a negation, such as [~P], or
@@ -1393,9 +1382,9 @@ module Std : sig
    *)
 
   val admit : unit tactic
-  (** Admits the current goal, axiomaticizing it. This marks the current
-      goal as an axiom and closes it, leaving the proof incomplete. Useful
-      for debugging or for temporarily accepting unprovable goals. *)
+  (** Admits the current goal. This marks the current goal as an axiom and
+      closes it, leaving the proof incomplete. Useful for debugging or for
+      temporarily accepting unprovable goals. *)
 
   (** {3 Performance-oriented tactic variants} *)
 
