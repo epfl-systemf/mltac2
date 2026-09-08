@@ -14,7 +14,7 @@ MLtac2 provides:
 
 ## Setup
 
-MLtac2 support Rocq >= 9.0 (including `master`), and can be installed using `opam`:
+MLtac2 support Rocq ≥ 9.0 (including `master`), and can be installed using `opam`:
 ```sh
 opam update
 opam repo add rocq-released https://rocq-prover.github.io/opam/released/
