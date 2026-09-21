@@ -742,7 +742,11 @@ module Ltac2Module = struct
     List.map (fun dp -> MPfile dp) (Library.loaded_libraries())
 
   module Field = struct
-    type t = Tac2ffi.ModField.t
+    type t = ..
+    type t +=
+       | Ref of GlobRef.t
+       | Submodule of ModPath.t
+       | Rewrule
   end
 
   let openmod_revstruct m senv =
@@ -779,16 +783,16 @@ module Ltac2Module = struct
                   | MoreFunctor _ -> (* functor *) None
                   | NoFunctor body -> Some body
     in
-    let to_field (lab, f) : Tac2ffi.ModField.t = match (f:_ Declarations.structure_field_body) with
+    let to_field (lab, f) : Field.t = match (f:_ Declarations.structure_field_body) with
       | SFBconst _ ->
          let kn = KerName.make m lab in
-         Ref (ConstRef (Global.constant_of_delta_kn kn))
+         Field.Ref (ConstRef (Global.constant_of_delta_kn kn))
       | SFBmind _ ->
          let kn = KerName.make m lab in
-         Ref (IndRef ((Global.mind_of_delta_kn kn, 0)))
-      | SFBrules _ -> Rewrule
-      | SFBmodule _ -> Submodule (MPdot (m, lab))
-      | SFBmodtype _ -> Submodule (MPdot (m, lab))
+         Field.Ref (IndRef ((Global.mind_of_delta_kn kn, 0)))
+      | SFBrules _ -> Field.Rewrule
+      | SFBmodule _ -> Field.Submodule (MPdot (m, lab))
+      | SFBmodtype _ -> Field.Submodule (MPdot (m, lab))
     in
     Option.map (List.map to_field) body
 end

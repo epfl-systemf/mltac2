@@ -716,7 +716,20 @@ module Module : sig
       @since 9.2 *)
 
   module Field : sig
-    type t = Tac2ffi.ModField.t
+    type t = ..
+    (** Type of module fields.
+
+        May be extended in the future. *)
+
+    type t +=
+       | Ref of GlobRef.t
+       (** A reference in the module. *)
+
+       | Submodule of ModPath.t
+       (** A submodule field. *)
+
+       | Rewrule
+       (** A rewrite rule. *)
   end
 
   val contents : t -> Field.t list option
