@@ -1012,9 +1012,37 @@ module Ltac2Std = struct
   let eval = Tac2tactics.reduce_constr
   [%%endif]
 
+  [%%if rocq >= (9, 1)]
+  let changed x = Tacred.Changed x
+  [%%else]
+  let changed x = x
+  [%%endif]
+
   let change ?pattern ?(where = default_on_conclusion) f =
-    let f = to_fun1' Tac2ffi.(array constr) Tac2ffi.constr f in
-    Tac2tactics.change pattern f where
+    (* TODO: We cannot use [Tac2tactics.change] since it has the wrong type for [f].
+             We thus have to copy this code for [mk_clause] from [Tac2tactics]. *)
+    let mk_occurrences = function
+      | AllOccurrences -> Locus.AllOccurrences
+      | AllOccurrencesBut l -> Locus.AllOccurrencesBut l
+      | NoOccurrences -> Locus.NoOccurrences
+      | OnlyOccurrences l -> Locus.OnlyOccurrences l
+    in
+    let mk_occurrences_expr occs =
+      let occs = mk_occurrences occs in
+      Locusops.occurrences_map (List.map (fun i -> Locus.ArgArg i)) occs
+    in
+    let mk_hyp_location (id, occs, h) =
+      ((mk_occurrences_expr occs, id), h)
+    in
+    let mk_clause cl = {
+        Locus.onhyps = Option.map (fun l -> List.map mk_hyp_location l) cl.onhyps;
+        Locus.concl_occs = mk_occurrences_expr cl.concl_occs;
+      }
+    in
+    Proofview.Goal.enter begin fun _ ->
+      let f subst _ sigma = changed (sigma, f subst) in
+      Tactics.change ~check:true pattern f (mk_clause where)
+    end
 
   let rewrite ?(e = false) ?(where = default_on_conclusion) ?by rewrites =
     let by = Option.map (thunk' Tac2ffi.unit) by in

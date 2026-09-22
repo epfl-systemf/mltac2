@@ -1505,12 +1505,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.subst> Reference manual *)
 
-  (* TODO: Change [constr array] to [constr Id.Map.t] instead. *)
-  val change :
-    ?pattern:pattern ->
-    ?where:clause ->
-    (constr array -> constr tactic) ->
-    unit tactic
+  val change : ?pattern:pattern -> ?where:clause -> (constr Id.Map.t -> constr) -> unit tactic
   (** [change ?pattern f cl] finds subterms matching [pattern] in the selected
       hypotheses and/or conclusion specified by [cl], and replaces them with
       [f args] where [args] are the matched subterms.
