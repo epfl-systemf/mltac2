@@ -1114,11 +1114,8 @@ end
 
 (** Built-in types *)
 type ident = Id.t
-type uint63 = Uint63.t
 type evar = Evar.t
-type sort = Sorts.t
 type cast = Constr.cast_kind
-type instance = EConstr.EInstance.t
 type constant = Constant.t
 type inductive = Ind.t
 type constructor = Construct.t
