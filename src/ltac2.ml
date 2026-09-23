@@ -911,9 +911,18 @@ end
 (** {2 Unification} *)
 
 module Ltac2Unification = struct
-  type conv_flag = Evd.conv_pb
+  type conv_flag = .. (* Extensible version of Evd.conv_pb *)
+  type conv_flag +=
+     | Cumulative
+     | Conv
+
+  let mk_pb = function
+    | Cumulative -> Conversion.CUMUL
+    | Conv -> Conversion.CONV
+    | _ -> assert false
 
   let conv env sigma pb ts c1 c2 =
+    let pb = mk_pb pb in
     Reductionops.infer_conv ~pb ~ts env sigma c1 c2
 
   let unify = Tac2tactics.evarconv_unify
@@ -1116,13 +1125,32 @@ module Ltac2Std = struct
     | None -> Equality.subst_all ()
     | Some hyps -> Equality.subst hyps
 
-  type debug = Hints.debug
-  type strategy = Class_tactics.search_strategy
+  type debug = .. (* Extensible version of Hints.debug *)
+  type debug +=
+     | Debug
+     | Info
+     | Off
 
-  let trivial ?(debug = Hints.Off) ?dbs refs = Tac2tactics.trivial debug refs dbs
-  let auto ?(debug = Hints.Off) ?n ?dbs refs = Tac2tactics.auto debug n refs dbs
-  let eauto ?(debug = Hints.Off) ?n ?dbs refs = Tac2tactics.eauto debug n refs dbs
-  let typeclasses_eauto ?strategy ?n ?dbs () = Tac2tactics.typeclasses_eauto strategy n dbs
+  let mk_debug = function
+    | Debug -> Hints.Debug
+    | Info -> Hints.Info
+    | Off -> Hints.Off
+    | _ -> assert false
+
+  type strategy = .. (* Extensible version of Class_tactics.search_strategy *)
+  type strategy +=
+     | Dfs
+     | Bfs
+
+  let mk_strategy = function
+    | Dfs -> Class_tactics.Dfs
+    | Bfs -> Class_tactics.Bfs
+    | _ -> assert false
+
+  let trivial ?(debug = Off) ?dbs refs = Tac2tactics.trivial (mk_debug debug) refs dbs
+  let auto ?(debug = Off) ?n ?dbs refs = Tac2tactics.auto (mk_debug debug) n refs dbs
+  let eauto ?(debug = Off) ?n ?dbs refs = Tac2tactics.eauto (mk_debug debug) n refs dbs
+  let typeclasses_eauto ?strategy ?n ?dbs () = Tac2tactics.typeclasses_eauto (Option.map mk_strategy strategy) n dbs
 
   let resolve_tc = Class_tactics.resolve_tc
 

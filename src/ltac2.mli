@@ -1827,8 +1827,25 @@ module Std : sig
 
   (** {3 Programmable proof search} *)
 
-  type debug = Hints.debug
-  type strategy = Class_tactics.search_strategy
+  type debug = private ..
+  (** Controls whether debug information is printed or not.
+
+      @see {!type:Hints.debug} *)
+
+  type debug +=
+     | Debug
+     | Info
+     | Off
+
+  type strategy = private ..
+  (** Controls which strategy to use for proof search.
+
+      @see {!type:Class_tactics.search_strategy}
+   *)
+
+  type strategy +=
+     | Dfs (** Depth-first search. *)
+     | Bfs (** Breadth-first search. *)
 
   val auto : ?debug:debug -> ?n:int -> ?dbs:ident list -> reference list -> unit tactic
   (** [auto refs ?debug ?n ?dbs] applies the auto proof search algorithm with
@@ -2033,9 +2050,20 @@ end
 (** {2 Unification} *)
 
 module Unification : sig
-  type conv_flag = Evd.conv_pb
+  type conv_flag = private ..
   (** Controls if cumulativity [Prop ≤ Set ≤ Type 1 ≤ … ≤ Type i ≤ …] is
-      used for conversion. *)
+      used for conversion.
+
+      @see {!type:Conversion.conv_pb}
+   *)
+
+  type conv_flag +=
+     | Cumulative
+     (** Enables cumulativity [Prop ≤ Set ≤ Type 1 ≤ … ≤ Type i ≤ …] for conversion. *)
+
+     | Conv
+     (** Do not enable cumulativity [Prop ≤ Set ≤ Type 1 ≤ … ≤ Type i ≤ …] for
+         conversion. *)
 
   val conv : Environ.env -> Evd.evar_map -> conv_flag -> TransparentState.t -> constr -> constr -> Evd.evar_map option
   (** [conv env sigma flag ts c1 c2] returns [Some env] if both [c1] and [c2] are
