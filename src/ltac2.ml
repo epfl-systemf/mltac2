@@ -903,8 +903,19 @@ module Ltac2TransparentState = struct
   let mem_var v ts = Id.Pred.mem v ts.tr_var
 
   [%%if rocq >= (9, 3)]
-  type strategy_level = Conv_oracle.level
-  let with_strategy level grs tac = Tac2tactics.with_strategy level grs (fun () -> tac)
+  type strategy_level = .. (* Extensible version of Conv_oracle.level *)
+  type strategy_level +=
+     | Expand
+     | Opaque
+     | Level of int
+
+  let mk_strategy_level = function
+    | Expand -> Conv_oracle.Expand
+    | Opaque -> Conv_oracle.Opaque
+    | Level n -> Conv_oracle.Level n
+    | _ -> assert false
+
+  let with_strategy level grs tac = Tac2tactics.with_strategy (mk_strategy_level level) grs (fun () -> tac)
   [%%endif]
 end
 

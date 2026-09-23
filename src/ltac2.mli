@@ -2027,13 +2027,16 @@ module TransparentState : sig
       transparency state [t]. *)
 
   [%%if rocq >= (9, 3)]
-  type strategy_level = Conv_oracle.level
-  (** Strategy levels used by [with_strategy]:
+  type strategy_level = private ..
+  (** Strategy levels used by [with_strategy].
 
-      - [Expand] corresponds to the [-oo] level (always unfold)
-      - [Opaque] corresponds to the [+oo] level (never unfold)
-      - [Level n] corresponds to integer level [n] (where [Level 0] is
-        transparent). *)
+      @see {!type:Conv_oracle.level} *)
+
+  type strategy_level +=
+     | Expand       (** Corresponds to the [-oo] level (always unfold). *)
+     | Opaque       (** Corresponds to the [+oo] level (never unfold). *)
+     | Level of int (** Corresponds to integer level [n] (where [Level 0] is
+                        transparent). *)
 
   val with_strategy : strategy_level -> GlobRef.t list -> 'a tactic -> 'a tactic
   (** [with_strategy lvl refs tac] temporarily sets the strategy level of all
