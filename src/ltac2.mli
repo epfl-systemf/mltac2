@@ -1830,7 +1830,7 @@ module Std : sig
   type debug = private ..
   (** Controls whether debug information is printed or not.
 
-      @see {!type:Hints.debug} *)
+      See {!type:Hints.debug}. *)
 
   type debug +=
      | Debug
@@ -1840,7 +1840,7 @@ module Std : sig
   type strategy = private ..
   (** Controls which strategy to use for proof search.
 
-      @see {!type:Class_tactics.search_strategy}
+      See {!type:Class_tactics.search_strategy}.
    *)
 
   type strategy +=
@@ -2054,7 +2054,7 @@ module Unification : sig
   (** Controls if cumulativity [Prop ≤ Set ≤ Type 1 ≤ … ≤ Type i ≤ …] is
       used for conversion.
 
-      @see {!type:Conversion.conv_pb}
+      See {!type:Conversion.conv_pb}.
    *)
 
   type conv_flag +=
