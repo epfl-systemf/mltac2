@@ -4,7 +4,6 @@
     and the reference manual. *)
 
 open Names
-open Ltac2_plugin
 open Proofview
 
 (** {1 Built-in types} *)
@@ -21,6 +20,7 @@ type constr = EConstr.t
 type preterm = Ltac_pretype.closed_glob_constr
 type binder = Name.t EConstr.binder_annot * EConstr.types
 type message = Pp.t
+type reference = GlobRef.t
 type err = Exninfo.iexn
 type iexn = Exninfo.iexn
 type exninfo = Exninfo.info
@@ -408,19 +408,19 @@ end
 (** {2 Environment} *)
 
 module Env : sig
-  val get : Libnames.full_path -> (GlobRef.t, unit) result
+  val get : Libnames.full_path -> (reference, unit) result
   (** [get path] returns the global reference corresponding to the absolute name
       given as argument, or [Error ()] if it does not exist. *)
 
-  val path : GlobRef.t -> (Libnames.full_path, unit) result
+  val path : reference -> (Libnames.full_path, unit) result
   (** [path ref] returns the absolute name of the given reference, or [Error ()]
       if the reference does not exist. *)
 
-  val expand : Libnames.qualid -> GlobRef.t list
+  val expand : Libnames.qualid -> reference list
   (** [expand qualid] returns the list of all global references whose absolute
       name contains the argument list as a suffix.  *)
 
-  val instantiate : Environ.env -> Evd.evar_map -> GlobRef.t -> Evd.evar_map * constr
+  val instantiate : Environ.env -> Evd.evar_map -> reference -> Evd.evar_map * constr
   (** [instantiate env sigma ref] returns a fresh instance of the corresponding
       reference, in particular generating fresh universe variables and constraints
       when this reference is universe-polymorphic. *)
@@ -694,7 +694,7 @@ module Module : sig
 
       @since 9.2 *)
 
-  val module_of_reference : GlobRef.t -> t
+  val module_of_reference : reference -> t
   (** [module_of_reference ref] returns the module of the reference.
 
       @raise Invalid_argument if [ref] is a [VarRef].
@@ -719,7 +719,7 @@ module Module : sig
         May be extended in the future. *)
 
     type t +=
-       | Ref of GlobRef.t
+       | Ref of reference
        (** A reference in the module. *)
 
        | Submodule of ModPath.t
@@ -989,7 +989,7 @@ module Scheme : sig
 
       @since 9.3 *)
 
-  val lookup : kind -> GlobRef.t -> GlobRef.t option
+  val lookup : kind -> reference -> reference option
   (** [lookup kind ref] looks up the scheme registered under [kind] for the
       reference [ref]. Returns [None] if [ref] is not an inductive type or if no such
       scheme is registered.
@@ -1143,39 +1143,276 @@ module Scheme : sig
 end
 [%%endif]
 
+(** {2 Syntax DSL} *)
+
+module Syntax : sig
+  (** {3 Hypotheses} *)
+
+  type hypothesis = private ..
+  (** Type of hypothesis target. *)
+
+  type hypothesis +=
+     | Named_hyp of ident (** [Named_hyp h] selects hypothesis [h]. *)
+     | Nth_hyp of int     (** [Nth_hyp n] selects the [n]-th hypothesis. *)
+
+  (** {3 Bindings}
+
+      @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#bindings>
+        Reference manual, "Bindings"
+   *)
+
+  type bindings = private ..
+  (** Type of term bindings. *)
+
+  type bindings +=
+     | No_bindings
+     (** An empty list of bindings. *)
+
+     | Implicit of constr list
+     (** [Implicit [t₁; …; tₙ]] binds free variables in left-to-right order of
+         their first appearance in the relevant term. *)
+
+     | Explicit of (hypothesis * constr) list
+     (** [Explicit [(h₁, t₁); …; (hₙ, tₙ)]] binds variables [hᵢ] to [tᵢ]. *)
+
+  type constr_with_bindings = { t: constr; bindings: bindings }
+  (** A term with {!type:bindings}. *)
+
+  val term : constr -> constr_with_bindings
+  (** [term t] adds default bindings to [t].
+
+      Expected usage: [{ (term t) with bindings = … }].
+   *)
+
+  (** {3 Intropatterns} *)
+
+  type +'a intropattern
+  (** An intropattern lets you specify the name to assign to variables and
+      hypotheses introduced by tactics.
+
+      The type variable is used for statically distinguishing subtypes of
+      intropatterns.
+   *)
+
+  type naming = [ `Naming ]
+  (** Tag for intropatterns used for naming hypotheses (e.g. in [eqn:]
+      clauses). *)
+
+  type or_and = [ `Or_and ]
+  (** Tag for intropatterns that split conjunctions/disjunctions, sometimes used
+      in [as] clauses. *)
+
+  type orientation = [ `Orientation ]
+  (** Tag for intropatterns that are used as rewrite orientations (i.e. [(-->)] and [(<--)]). *)
+
+  type equality = [ orientation | `Equality ]
+  (** Tag for equality intropatterns. *)
+
+  type simple = [ naming | or_and | equality ]
+  (** Tag for simple intropatterns. *)
+
+  type other = [ `Other ]
+  (** Tag for other intropatterns. *)
+
+  type any = [ simple | other ]
+  (** Top tag for all intropatterns.
+
+      Useful in error messages. *)
+
+  (** {4 Naming patterns} *)
+
+  val name : ident -> [> naming] intropattern
+  (** [name ident] uses the specified name. *)
+
+  val ( ?? ) : [> naming ] intropattern
+  (** [(??)] lets Rocq generate a fresh name. *)
+
+  val ( ?: ) : ident -> [> naming] intropattern
+  (** [?:ident] lets Rocq generate a fresh name that begins with [ident]. *)
+
+  (** {4 Splitting patterns} *)
+
+  val ( & ) : simple intropattern -> simple intropattern -> [> or_and] intropattern
+  (** [p1 & p2] splits a hypothesis of the form [A /\ B] into [p1: A] and [p2: B].
+      Right-associative. *)
+
+  val and_pattern : simple intropattern list -> [> or_and] intropattern
+  (** [and_pattern [p₁; …; pₙ]] is equivalent to [p₁ & … & pₙ]. *)
+
+  val or_pattern : any intropattern list list -> [> or_and] intropattern
+  (** [or_pattern [p₁; …; pₙ]] splits a hypothesis of the form [A₁ \/ … \/ Aₙ]
+      into [n] subgoals, where the [i]-th subgoal will have [pᵢ: Aᵢ]. *)
+
+  (** {4 Equality patterns}
+
+      These patterns can be used when the hypothesis is an equality. *)
+
+  val ( --> ) : [> orientation] intropattern
+  (** Replaces the RHS of the hypothesis with the LHS in the conclusion of the
+      goal. *)
+
+  val ( <-- ) : [> orientation] intropattern
+  (** Replaces the LHS of the hypothesis with the RHS in the conclusion of the
+      goal. *)
+
+  val ( @= ) : any intropattern list -> [> equality] intropattern
+  (** Applies either {!val:Std.injection} or {!val:Std.discriminate}. *)
+
+  (** {4 Other patterns} *)
+
+  val __ : [> simple] intropattern
+  (** Wildcard intropattern that discards the matched pattern (unless it is required
+      by another hypothesis). *)
+
+  val ( @* ) : [> other] intropattern
+  (** Introduces one or more dependent premises from the result until there are
+      no more. *)
+
+  val ( @** ) : [> other] intropattern
+  (** Introduces one or more dependent or non-dependent premises from the result
+      until there are no more premises. *)
+
+  val ( % ) : simple intropattern -> constr -> [> simple] intropattern
+  (** [pattern%term] first applies [term] with the {!val:Std.apply} tactic on
+      the hypothesis to be introduced, then it uses [pattern]. *)
+
+  (** {3 Occurrences} *)
+
+  type _ occurrences = private ..
+  (** An occurrence is a subterm of a goal or hypothesis that matches a
+      pattern. *)
+
+  type _ occurrences +=
+     | At : 'a list -> 'a occurrences
+     (** [At l] selects the specified occurrences. *)
+
+     | Everywhere : 'a occurrences
+     (** [Everywhere] selects every occurrence (similar to Ltac's [*]). *)
+
+     | Everywhere_but : int list -> int occurrences
+     (** [Everywhere_but l] selects every occurrence that is not in [l] (similar
+         to Ltac's [at -l]). *)
+
+     | Nowhere : 'a occurrences
+     (** [Nowhere] selects no occurrence. *)
+
+  (** {3 Clauses} *)
+
+  type hypothesis_selector = private ..
+  (** Selects whether an occurrence should apply to the type or value of the
+      hypothesis. *)
+
+  type hypothesis_selector +=
+     | Hyp of ident      (** Applies to the whole hypothesis. *)
+     | Type_of of ident  (** Selects the type part of the hypothesis. *)
+     | Value_of of ident (** Selects the value part of the hypothesis. *)
+
+  type clause
+  (** A clause selects a subset of occurrences in the hypothesis and the goal. *)
+
+  val ( |- ) :
+    (hypothesis_selector * int occurrences) occurrences ->
+    int occurrences ->
+    clause
+  (** [hyps_occs |- goal_occs] creates a clause that selects occurrences in the hypotheses
+      according to [hyps_occs], and occurrences in the goal according to [goal_occs].
+
+      Examples:
+       - [Everywhere |- Everywhere] corresponds to [* |- *].
+       - [Nowhere |- Everywhere] corresponds to [|- *].
+       - [Nowhere |- Nowhere] corresponds to [|-].
+       - [At [(Type_of h, Everywhere)] |- (At [1; 2])] corresponds to [(type of h) |- * at 1 2].
+   *)
+
+  (** {3 Move locations} *)
+
+  type move_location = private ..
+  (** Specifies where to move a hypothesis for the {!val:Std.move} tactic. *)
+
+  type move_location +=
+     | At_top          (** [at top] *)
+     | At_bottom       (** [at bottom] *)
+     | Before of ident (** [before h] *)
+     | After of ident  (** [after h] *)
+
+  (** {3 Inversion kinds} *)
+
+  type inversion_kind = private ..
+  (** Type of inversion performed. *)
+
+  type inversion_kind +=
+     | Simple     (** Behave like Ltac's [simple inversion]. *)
+     | Full       (** Behave like Ltac's [inversion]. *)
+     | Full_clear (** Behave like Ltac's [inversion_clear]. *)
+
+  (** {3 Rewrites} *)
+
+  type multiplicity = private ..
+  (** Specifies the number of rewrites to perform. *)
+
+  type multiplicity +=
+     | Exactly of int (** [Exactly n] performs a rewrite exactly [n] times. *)
+     | At_most of int (** [At_most n] performs a rewrite at most [n] times ([?n] in Ltac). *)
+     | Star           (** [Star] performs a rewrite as many times as possible, possibly zero. *)
+     | Plus           (** [Plus] performs a rewrite as many times as possible and at least once. *)
+
+  type rewriting
+  (** Types of rewriting for the {!val:Std.rewrite} tactic. *)
+
+  val rewriting : ?orient:orientation intropattern -> ?n:multiplicity -> ?with_:bindings -> constr -> rewriting
+  (** [rewriting ?orient e ?n ?with_] rewrites using equality or equivalence
+      [e].
+
+      @param e
+        Equality or equivalence to use, of the form [forall …, term₁ = term₂]
+        or [forall …, term₁ EQ term₂] for some equivalence relation [EQ].
+
+      @param orient (default = [(-->)])
+        If equal to [(-->)], rewrites [term₁] into [term₂].
+        If equal to [(<--)], rewrites [term₂] into [term₁].
+
+      @param n (default = [Exactly 1])
+        Number of rewrites to perform.
+
+      @param with_ (default = [No_bindings])
+        Bindings to use.
+   *)
+
+  (** {3 Induction clauses}
+
+      @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#case-analysis>
+        Reference manual, "Case analysis"
+   *)
+
+  type induction_arg = private ..
+  (** @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#grammar-token-induction_arg>
+        Reference manual, induction_arg *)
+
+  type induction_arg +=
+     | On_constr of constr_with_bindings (** [On_constr t] performs induction/case analysis on [t]. *)
+     | On_hyp of hypothesis              (** [On_hyp h] performs induction/case analysis on hypothesis [h]. *)
+
+  type induction_clause
+  (** @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#grammar-token-induction_clause>
+        Reference manual, induction_clause *)
+
+  val induct_on :
+    ?as_pattern:or_and intropattern ->
+    ?eqn:naming intropattern ->
+    ?where:clause ->
+    induction_arg ->
+    induction_clause
+  (** [induct_on arg ?as_pattern ?eqn ?where] describes an induction clause. *)
+end
+
 (** {2 Standard tactics} *)
 
 module Std : sig
-  type hypothesis = Tac2types.quantified_hypothesis
-  type bindings = Tac2types.bindings
-  type constr_with_bindings = Tac2types.constr_with_bindings
-  type occurrences = Tac2types.occurrences
-  type hyp_location_flag = Tac2types.hyp_location_flag
-  type clause = Tac2types.clause
-  type reference = GlobRef.t
-  type strength = Genredexpr.strength
-  [%%if rocq >= (9, 2)]
-  type red_flags = Tac2types.red_flag
-  [%%else]
-  type red_flags = reference Genredexpr.glob_red_flag
-  [%%endif]
-  type intro_pattern = Tac2types.intro_pattern
-  and intro_pattern_naming = Tac2types.intro_pattern_naming
-  and intro_pattern_action = Tac2types.intro_pattern_action
-  and or_and_intro_pattern = Tac2types.or_and_intro_pattern
-  type destruction_arg = Tac2types.destruction_arg
-  type induction_clause = Tac2types.induction_clause
-  type assertion = Tac2types.assertion
-  type repeat = Equality.multi
-  type orientation = Tac2types.orientation
-  type rewriting = Tac2types.rewriting
-  type evar_flag = Tac2types.evars_flag
-  type move_location = Id.t Logic.move_location
-  type inversion_kind = Inv.inversion_kind
+  open Syntax
 
   (** {3 Applying theorems} *)
 
-  val assumption : ?e:evar_flag -> unit -> unit tactic
+  val assumption : ?e:bool -> unit -> unit tactic
   (** [assumption ()] looks in the local context for a hypothesis whose type is
       convertible to the goal. If it is the case, the subgoal is proved. Otherwise,
       it fails.
@@ -1188,7 +1425,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.assumption> Reference manual
    *)
 
-  val apply : ?e:evar_flag -> ?in_hyp_as:(ident * intro_pattern option) -> constr_with_bindings list -> unit tactic
+  val apply : ?e:bool -> ?in_hyp_as:(ident * simple intropattern option) -> constr_with_bindings list -> unit tactic
   (** [apply ?e ts ?in_hyp_as] uses unification to match the type of each [t] with the goal
       (to do backward reasoning) or with a hypothesis (to do forward reasoning).
       Specifying multiple {!type:constr_with_bindings} is equivalent to giving each one
@@ -1206,7 +1443,7 @@ module Std : sig
 
   (** {3 Managing the local context} *)
 
-  val intro : ?name:ident -> ?where:move_location -> unit -> unit tactic
+  val intro : ?name:ident -> ?where:Syntax.move_location -> unit -> unit tactic
   (** [intro ?name ?where ()] introduces an item in the context by removing
       certain constructs in the goal. If no item is found, the tactic fails.
 
@@ -1216,15 +1453,15 @@ module Std : sig
         already in use, Rocq will consider using [H0], [H1], etc., until it finds a
         fresh name.
 
-      @param where (default = [at `bottom])
+      @param where (default = [At_bottom])
         Indicates where to place the introduced hypothesis: at the top or bottom
         of the context or before or after another specified hypothesis.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.intro> Reference manual *)
 
-  val intros : ?e:evar_flag -> ?patterns:intro_pattern list -> unit -> unit tactic
-  (** [intros ?e ?patterns ()] introduces a list of new variables in the context
-      using the [patterns]. If [patterns] is not specified, the tactic
+  val intros : ?e:bool -> any intropattern list -> unit tactic
+  (** [intros ?e patterns] introduces a list of new variables in the context
+      using the [patterns]. If [patterns] is empty, the tactic
       introduces items until it reaches the head constant; it never fails and
       may leave the context unchanged.
 
@@ -1242,7 +1479,7 @@ module Std : sig
       of premises.
 
       We recommend explicitly naming items with [intros] instead of using
-      [intros_until (AnonHyp n)].
+      [intros_until (Nth_hyp n)].
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.intros-until> Reference manual
    *)
@@ -1254,7 +1491,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.revert> Reference manual
    *)
 
-  val move : ident -> move_location -> unit tactic
+  val move : ident -> Syntax.move_location -> unit tactic
   (** [move hyp where] moves [hyp] and hypotheses that directly or directly refer to
       [hyp] that appear between [hyp] and [where].
 
@@ -1289,7 +1526,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.rename> Reference manual
    *)
 
-  val set : ?e:evar_flag -> ?where:clause -> Name.t -> constr -> unit tactic
+  val set : ?e:bool -> ?where:clause -> Name.t -> constr -> unit tactic
   (** [set ?e name t ?where] adds a new local definition [name := t] and replaces
       the body expression with the new variable [name] in the goal, or as specified
       by [where].
@@ -1304,9 +1541,9 @@ module Std : sig
    *)
 
   val remember :
-    ?e:evar_flag ->
+    ?e:bool ->
     ?as_name:ident ->
-    ?eqn:intro_pattern_naming ->
+    ?eqn:naming intropattern ->
     ?where:clause ->
     constr ->
     unit tactic
@@ -1320,7 +1557,7 @@ module Std : sig
         If [e] is [true], generates existential variables for uninstantiated
         variables instead of failing.
 
-      @param eqn (default = [IntroAnonymous])
+      @param eqn (default = [(??)])
         Specifies how to name the introduced equation.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.remember> Reference manual
@@ -1337,7 +1574,7 @@ module Std : sig
 
   (** {3 Controlling the proof flow} *)
 
-  val assert_ : assertion -> unit tactic
+  val assert_ : ?as_pattern:simple intropattern -> ?by:unit tactic -> constr -> unit tactic
   (** [assert_ assertion] adds a new hypothesis to the current subgoal and a new subgoal
       before it to prove the hypothesis.
 
@@ -1347,7 +1584,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.assert> Reference manual
    *)
 
-  val enough : ?as_pattern:intro_pattern -> ?by:unit tactic -> constr -> unit tactic
+  val enough : ?as_pattern:simple intropattern -> ?by:unit tactic -> constr -> unit tactic
   (** [enough t ?as_pattern ?by] adds a new hypothesis to the current subgoal and a new subgoal
       after it to prove the hypothesis.
 
@@ -1363,14 +1600,14 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.cut> Reference manual *)
 
-  val specialize : ?as_pattern:intro_pattern -> constr_with_bindings -> unit tactic
+  val specialize : ?as_pattern:simple intropattern -> constr_with_bindings -> unit tactic
   (** [specialize t ?as_pattern] specializes [t] (typically a hypothesis or
       lemma) by applying arguments to it.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.specialize> Reference manual
    *)
 
-  val generalize : (constr * occurrences * Name.t) list -> unit tactic
+  val generalize : (constr * int occurrences * Name.t) list -> unit tactic
   (** [generalize [(t, where, x)]] replaces the goal [G] with [forall (x: T), G'], where [t] is a subterm
       of [G] of type [T], and [G'] is obtained by replacing all occurrences of [t] with [x] within [G].
       Specifying multiple [t] is equivalent to [generalize t₁; …; generalize tₙ].
@@ -1494,7 +1731,7 @@ module Std : sig
 
   (** {4 Rewriting with Leibniz and setoid equality} *)
 
-  val rewrite : ?e:evar_flag -> ?where:clause -> ?by:unit tactic -> rewriting list -> unit tactic
+  val rewrite : ?e:bool -> ?where:clause -> ?by:unit tactic -> rewriting list -> unit tactic
   (** [rewrite rs ?e ?where ?by] replaces subterms with other subterms that have been proven to be equal
       or logically equivalent.
 
@@ -1505,15 +1742,15 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.rewrite> Reference manual
    *)
 
-  val setoid_rewrite : ?ltr:orientation -> ?in_hyp:ident -> constr_with_bindings -> occurrences -> unit tactic
-  (** [setoid_rewrite ?ltr ?in_hyp c occs] rewrites an occurrence of the term
+  val setoid_rewrite : ?orient:orientation intropattern -> ?in_hyp:ident -> constr_with_bindings -> int occurrences -> unit tactic
+  (** [setoid_rewrite ?orient ?in_hyp c occs] rewrites an occurrence of the term
       matched by [c] in the goal or the specified hypothesis using a setoid
       equality. Unlike {!val:rewrite}, this tactic works with relations
       registered through the generalized rewriting framework.
 
-      @param ltr (default = [true])
-        The rewrite orientation. If [true] (left-to-right), rewrites from
-        the LHS to the RHS of the equation. If [false], rewrites right-to-left.
+      @param orient (default = [(-->)])
+        The rewrite orientation. If [(-->)] (left-to-right), rewrites from
+        the LHS to the RHS of the equation. If [(<--)], rewrites right-to-left.
 
       @param in_hyp (default = [None])
         The name of the hypothesis in which to rewrite. If not provided,
@@ -1551,6 +1788,53 @@ module Std : sig
 
   [%%if rocq >= (9, 1)]
   module Red : sig
+    type delta_red
+    (** List of references to [delta]-reduce. *)
+
+    val only : reference list -> delta_red
+    (** Limits delta unfolding to the listed constants. *)
+
+    val except : reference list -> delta_red
+    (** Limits delta unfolding to all but the listed constants. *)
+
+    val all : delta_red
+    (** Does not limit delta unfolding. Equivalent to [except []]. *)
+
+    type red_flag
+    (** Type of reduction flag. *)
+
+    val head : red_flag
+    (** Do only head reduction, without going under binders. *)
+
+    val beta : red_flag
+    (** Beta-reduction of functional application. *)
+
+    val delta : delta_red -> red_flag
+    (** Delta-reduction: unfolding of transparent constants. *)
+
+    val match_ : red_flag
+    (** Reduction of [match] expressions. *)
+
+    val fix : red_flag
+    (** Reduction of [fix] expressions. *)
+
+    val cofix : red_flag
+    (** Reduction of [cofix] expressions. *)
+
+    val iota : red_flag list
+    (** Iota-reduction of pattern-matching ([match]) over a constructed term and
+        reduction of [fix] and [cofix] expressions. Shorthand for [[match; fix;
+        cofix]]. *)
+
+    val zeta : red_flag
+    (** Zeta-reduction: reduction of let-in definitions. *)
+
+    val all_flags : head:bool -> red_flag list
+    (** All reduction flags.
+
+        @param head (bool)
+          Whether to perform head reduction or not. *)
+
     type t = Redexpr.red_expr
     (** Type representing a reduction expression. Red expressions describe
         which reduction strategy to apply during tactic execution. *)
@@ -1566,7 +1850,7 @@ module Std : sig
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.hnf> Reference manual *)
 
-    val simpl : ?where:(pattern * occurrences) -> red_flags -> t tactic
+    val simpl : ?where:(pattern * int occurrences) -> red_flag list -> t tactic
     (** [simpl ?where flags] reduces a term to something still readable instead of
         fully normalizing it. It performs a sort of strong normalization with two
         key differences:
@@ -1580,12 +1864,12 @@ module Std : sig
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.simpl> Reference manual *)
 
-    val cbv : red_flags -> t tactic
+    val cbv : red_flag list -> t tactic
     (** [cbv flags] normalize the goal as specified by [flags].
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.cbv> Reference manual *)
 
-    val cbn : red_flags -> t tactic
+    val cbn : red_flag list -> t tactic
     (** [cbn flags] was intended to be a more principled, faster and more
         predictable replacement for {!val:simpl}. The main difference is that
         [cbn] may unfold constants even when they cannot be reused in recursive
@@ -1593,14 +1877,14 @@ module Std : sig
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.cbn> Reference manual *)
 
-    val lazy_ : red_flags -> t tactic
+    val lazy_ : red_flag list -> t tactic
     (** [lazy_ flags] performs on-demand reduction using a lazy strategy,
         only reducing subterms that are needed for the goal, with the given
         reduction [flags].
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#applying-conversion-rules> Reference manual *)
 
-    val unfold : (reference * occurrences) list -> t tactic
+    val unfold : (reference * int occurrences) list -> t tactic
     (** [unfold refs] replaces each occurrence of the specified global
         references by their definitions in the goal.
 
@@ -1613,20 +1897,20 @@ module Std : sig
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.fold> Reference manual *)
 
-    val pattern : (constr * occurrences) list -> t
+    val pattern : (constr * int occurrences) list -> t
     (** [pattern cs] introduces [β]-redexes in the goal so that the
         specified subterms become separate variables at the head of the
         term.
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.pattern> Reference manual *)
 
-    val vm : ?where:(pattern * occurrences) -> unit -> t
+    val vm : ?where:(pattern * int occurrences) -> unit -> t
     (** [vm ?where ()] uses the virtual machine for very fast computation, with
         an optional reduction context.
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.vm_compute> Reference manual *)
 
-    val native : ?where:(pattern * occurrences) -> unit -> t
+    val native : ?where:(pattern * int occurrences) -> unit -> t
     (** [native ?where ()] uses native code compilation for the fastest possible
         computation, with an optional reduction context.
 
@@ -1651,8 +1935,8 @@ module Std : sig
 
   (** {4 Applying constructors} *)
 
-  val constructor : ?e:evar_flag -> ?n:int -> ?bindings:bindings -> unit -> unit tactic
-  (** [constructor ?e ?n ?bindings ()] applies the [n]-th constructor, if
+  val constructor : ?e:bool -> ?n:int -> ?with_:bindings -> unit -> unit tactic
+  (** [constructor ?e ?n ?with_ ()] applies the [n]-th constructor, if
       specified, or the first matching constructor to prove the current
       goal. Fails if no constructor applies.
 
@@ -1662,8 +1946,8 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.constructor> Reference manual *)
 
-  val split : ?e:evar_flag -> ?bindings:bindings -> unit -> unit tactic
-  (** [split ?e ?bindings ()] proves a conjunction [A /\ B] or an iff [A <-> B]
+  val split : ?e:bool -> ?with_:bindings -> unit -> unit tactic
+  (** [split ?e ?with_ ()] proves a conjunction [A /\ B] or an iff [A <-> B]
       by splitting it into subgoals. For conjunction, the left conjunct
       becomes the first subgoal. Any bindings are applied to the constructor.
 
@@ -1673,8 +1957,8 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#applying-constructors> Reference manual *)
 
-  val left : ?e:evar_flag -> ?bindings:bindings -> unit -> unit tactic
-  (** [left ?e ?bindings ()] proves a disjunctive goal [A \/ B] by selecting the
+  val left : ?e:bool -> ?with_:bindings -> unit -> unit tactic
+  (** [left ?e ?with_ ()] proves a disjunctive goal [A \/ B] by selecting the
       left disjunct [A], generating a subgoal for [A]. Any bindings are
       applied to the constructor.
 
@@ -1684,8 +1968,8 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#applying-constructors> Reference manual *)
 
-  val right : ?e:evar_flag -> ?bindings:bindings -> unit -> unit tactic
-  (** [right ?e ?bindings ()] proves a disjunctive goal [A \/ B] by selecting the
+  val right : ?e:bool -> ?with_:bindings -> unit -> unit tactic
+  (** [right ?e ?with_ ()] proves a disjunctive goal [A \/ B] by selecting the
       right disjunct [B], generating a subgoal for [B]. Any bindings are
       applied to the constructor.
 
@@ -1697,7 +1981,7 @@ module Std : sig
 
   (** {4 Case analysis} *)
 
-  val destruct : ?e:evar_flag -> ?using:constr_with_bindings -> induction_clause list -> unit tactic
+  val destruct : ?e:bool -> ?using:constr_with_bindings -> induction_clause list -> unit tactic
   (** [destruct clauses ?e ?using] perform case analysis on each clause in
       [clauses], generating a subgoal for each of the constructors of the inductive type.
 
@@ -1711,7 +1995,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.destruct> Reference manual
    *)
 
-  val case : ?e:evar_flag -> constr_with_bindings -> unit tactic
+  val case : ?e:bool -> constr_with_bindings -> unit tactic
   (** [case c ?e] is an older, more basic tactic to perform case analysis
       without recursion. We recommend using {!val:destruct} instead where possible.
       [case] only modifies the goal; it does not modify the local context.
@@ -1725,7 +2009,7 @@ module Std : sig
 
   (** {4 Induction} *)
 
-  val induction : ?e:evar_flag -> ?using:constr_with_bindings -> induction_clause list -> unit tactic
+  val induction : ?e:bool -> ?using:constr_with_bindings -> induction_clause list -> unit tactic
   (** [induction clauses ?e ?using] applies induction principles to each clause in
       [clauses], left to right.
 
@@ -1739,7 +2023,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.induction> Reference manual
    *)
 
-  val elim : ?e:evar_flag -> ?using:constr_with_bindings -> constr_with_bindings -> unit tactic
+  val elim : ?e:bool -> ?using:constr_with_bindings -> constr_with_bindings -> unit tactic
   (** [elim c ?e ?using] is an older, more basic induction tactic. Unlike
       {!val:induction}, [elim] only modifies the goal; it does not modify the local
       context. We recommend using {!val:induction} instead where possible.
@@ -1768,7 +2052,7 @@ module Std : sig
 
   (** {4 Equality of inductive types} *)
 
-  val discriminate : ?e:evar_flag -> ?arg:destruction_arg -> unit -> unit tactic
+  val discriminate : ?e:bool -> ?arg:induction_arg -> unit -> unit tactic
   (** [discriminate ?e ?arg ()] proves the current goal by discriminating an
       equality between two constructors of the same inductive type. The
       argument [arg] specifies which hypothesis or term to discriminate.
@@ -1778,12 +2062,12 @@ module Std : sig
         variables instead of failing.
 
       @param arg (default = [None])
-        The destruction argument specifying what to discriminate. If not
+        The induction argument specifying what to discriminate. If not
         provided, the current goal's hypotheses are checked.
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.discriminate> Reference manual *)
 
-  val injection : ?e:evar_flag -> ?arg:destruction_arg -> ?as_patterns:intro_pattern list -> unit -> unit tactic
+  val injection : ?e:bool -> ?arg:induction_arg -> ?as_patterns:simple intropattern list -> unit -> unit tactic
   (** [injection () ?e ?ipat ?arg] exploits the property that constructors of
       inductive types are injective, i.e. that if [c] is a constructor of an inductive
       type and [c t1 = c t2] then [t1 = t2] are equal too.
@@ -1793,7 +2077,7 @@ module Std : sig
         variables instead of failing.
 
       @param arg (default = [None])
-        The destruction argument specifying what to inject. If not
+        The induction argument specifying what to inject. If not
         provided, the current goal's hypotheses are used.
 
       @param as_patterns (default = [None])
@@ -1804,9 +2088,9 @@ module Std : sig
 
   val inversion :
     ?kind:inversion_kind ->
-    ?as_pattern:intro_pattern ->
+    ?as_pattern:or_and intropattern ->
     ?in_hyps:ident list ->
-    destruction_arg ->
+    induction_arg ->
     unit tactic
   (** [inversion ?kind arg ?as_pattern ?ids] performs inversion on the given term
       [arg] using the specified [kind] of inversion. Inversion generates
@@ -2065,7 +2349,7 @@ module TransparentState : sig
      | Level of int (** Corresponds to integer level [n] (where [Level 0] is
                         transparent). *)
 
-  val with_strategy : strategy_level -> GlobRef.t list -> 'a tactic -> 'a tactic
+  val with_strategy : strategy_level -> reference list -> 'a tactic -> 'a tactic
   (** [with_strategy lvl refs tac] temporarily sets the strategy level of all
       references in [refs] to [lvl], executes [tac], and then restores the
       original strategy levels. This is the Ltac2 analogue of the

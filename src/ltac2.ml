@@ -11,6 +11,8 @@ open Proofview.Notations
 
 let return = Proofview.tclUNIT
 
+type reference = GlobRef.t
+
 [%%if rocq >= (9, 1)]
 let to_fun1 _ _ (f : 'a -> 'b) : ('a, 'b) Tac2ffi.fun1 =
   fun x -> return (f x)
@@ -978,52 +980,267 @@ module Ltac2Unification = struct
   let solve_constraints = Refine.solve_constraints
 end
 
+(** {2 Syntax DSL}
+
+    We provide custom syntax for easily inputting tactic arguments, mirorring
+    Ltac2 notations. In addition to being easier to type, controlling the input
+    syntax guarantees forward stability by decoupling it from {!module:Tac2types}.
+ *)
+
+module Syntax = struct
+  (** {3 Hypotheses} *)
+
+  type hypothesis = .. (** Extensible version of [Tac2types.quantified_hypothesis]. *)
+  type hypothesis +=
+     | Named_hyp of Id.t
+     | Nth_hyp of int
+
+  let mk_hypothesis = function
+    | Named_hyp h -> Tac2types.NamedHyp (CAst.make h)
+    | Nth_hyp n -> Tac2types.AnonHyp n
+    | _ -> assert false
+
+  (** {3 Bindings}
+
+      @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#bindings>
+        Reference manual, "Bindings"
+   *)
+
+  type bindings = .. (** Extensible version of [Tac2types.bindings]. *)
+  type bindings +=
+     | No_bindings
+     | Implicit of EConstr.t list
+     | Explicit of (hypothesis * EConstr.t) list
+
+  let mk_bindings = function
+    | No_bindings -> Tac2types.NoBindings
+    | Implicit l -> Tac2types.ImplicitBindings l
+    | Explicit l -> Tac2types.ExplicitBindings (List.map (fun (h, c) -> mk_hypothesis h, c) l)
+    | _ -> assert false
+
+  type constr_with_bindings = { t: EConstr.t; bindings: bindings }
+
+  let term t = { t; bindings = No_bindings }
+
+  let mk_constr_with_bindings { t; bindings } =
+    t, mk_bindings bindings
+
+  (** {3 Intropatterns} *)
+
+  type +'a intropattern = Tac2types.intro_pattern
+
+  type naming = [ `Naming ]
+  type or_and = [ `Or_and ]
+  type orientation = [ `Orientation ]
+  type equality = [ orientation | `Equality ]
+  type simple = [ naming | or_and | equality ]
+  type other = [ `Other ]
+  type any = [ simple | other ]
+
+  (** {4 Naming patterns} *)
+
+  let name h = IntroNaming (IntroIdentifier h)
+  let fresh h = IntroNaming (IntroFresh h)
+  let ( ?: ) = fresh
+  let ( ?? ) = IntroNaming IntroAnonymous
+  let __ = IntroAction IntroWildcard
+
+  (** {4 Splitting patterns} *)
+
+  (** Infix syntax for and-intropatterns.
+      Right-associative per OCaml's associativity rules. *)
+  let ( & ) x y =
+    match y with
+    | IntroAction (IntroOrAndPattern (IntroAndPattern y)) ->
+       IntroAction (IntroOrAndPattern (IntroAndPattern (x :: y)))
+    | _ ->
+       IntroAction (IntroOrAndPattern (IntroAndPattern [x; y]))
+
+  let and_pattern patterns = IntroAction (IntroOrAndPattern (IntroAndPattern patterns))
+  let or_pattern patterns = IntroAction (IntroOrAndPattern (IntroOrPattern patterns))
+
+  (** {4 Equality patterns} *)
+
+  let ( --> ) = IntroAction (IntroRewrite true)
+  let ( <-- ) = IntroAction (IntroRewrite false)
+  let ( @= ) pats = IntroAction (IntroInjection pats)
+
+  (** {4 Other patterns} *)
+
+  let ( @* ) = IntroForthcoming true
+  let ( @** ) = IntroForthcoming false
+  let ( % ) pat term = IntroAction (IntroApplyOn (thunk Tac2ffi.constr term, pat))
+
+  (** {3 Occurrences} *)
+
+  type _ occurrences = ..
+  type _ occurrences +=
+    | At : 'a list -> 'a occurrences
+    | Everywhere : 'a occurrences
+    | Everywhere_but : int list -> int occurrences
+    | Nowhere : 'a occurrences
+
+  let mk_occurrences = function
+    | At l -> OnlyOccurrences l
+    | Everywhere -> AllOccurrences
+    | Everywhere_but l -> AllOccurrencesBut l
+    | Nowhere -> NoOccurrences
+    | _ -> assert false
+
+  (** {3 Clauses} *)
+
+  type hypothesis_selector = .. (** See [Tac2types.hyp_location_flag]. *)
+  type hypothesis_selector +=
+     | Hyp of Id.t
+     | Type_of of Id.t
+     | Value_of of Id.t
+
+  type clause = Tac2types.clause
+
+  let ( |- ) (hyps: (hypothesis_selector * int occurrences) occurrences) (goal: int occurrences) =
+    match hyps with
+    | Everywhere ->
+       { onhyps = None; concl_occs = mk_occurrences goal }
+    | Nowhere ->
+       { onhyps = Some []; concl_occs = mk_occurrences goal }
+    | At hyps ->
+       let f (hyp_selector, occs) =
+         let flag, hyp =
+           match hyp_selector with
+           | Hyp h -> Tac2types.InHyp, h
+           | Type_of h -> Tac2types.InHypTypeOnly, h
+           | Value_of h -> Tac2types.InHypValueOnly, h
+           | _ -> assert false
+         in
+         (hyp, mk_occurrences occs, flag)
+       in
+       let hyps = List.map f hyps in
+       { onhyps = Some hyps; concl_occs = mk_occurrences goal }
+    | _ -> assert false
+
+  (** {3 Move locations} *)
+
+  type move_location = .. (* Extensible version of [Id.t Logic.move_location] *)
+  type move_location +=
+     | At_top
+     | At_bottom
+     | Before of Id.t
+     | After of Id.t
+
+  let mk_move_location = function
+    | At_top -> Logic.MoveFirst
+    | At_bottom -> Logic.MoveLast
+    | Before h -> Logic.MoveBefore h
+    | After h -> Logic.MoveAfter h
+    | _ -> assert false
+
+  (** {3 Inversion} *)
+
+  type inversion_kind = .. (** Extensible version of [Inv.inversion_kind] *)
+  type inversion_kind +=
+     | Simple
+     | Full
+     | Full_clear
+
+  let mk_inversion_kind = function
+    | Simple -> Inv.SimpleInversion
+    | Full -> Inv.FullInversion
+    | Full_clear -> Inv.FullInversionClear
+    | _ -> assert false
+
+  (** {3 Rewriting} *)
+
+  type multiplicity = .. (** Extensible version of [Equality.multi] *)
+  type multiplicity +=
+     | Exactly of int
+     | At_most of int
+     | Star
+     | Plus
+
+  let mk_multiplicity = function
+    | Exactly n -> Equality.Precisely n
+    | At_most n -> Equality.UpTo n
+    | Star -> Equality.RepeatStar
+    | Plus -> Equality.RepeatPlus
+    | _ -> assert false
+
+  type rewriting = Tac2types.rewriting
+
+  let rewriting ?orient ?(n = Exactly 1) ?(with_ = No_bindings) t =
+    Option.map ((=) (-->)) orient,
+    mk_multiplicity n,
+    return (mk_constr_with_bindings { t; bindings = with_ })
+
+  (** {3 Induction clauses}
+
+      @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#case-analysis>
+        Reference manual, "Case analysis"
+   *)
+
+  type induction_arg = .. (** Extensible version of [Tac2types.destruction_arg]. *)
+  type induction_arg +=
+     | On_constr of constr_with_bindings
+     | On_hyp of hypothesis
+
+  let mk_induction_arg = function
+    | On_constr c -> ElimOnConstr (return (mk_constr_with_bindings c))
+    | On_hyp (Named_hyp h) -> ElimOnIdent h
+    | On_hyp (Nth_hyp n) -> ElimOnAnonHyp n
+    | _ -> assert false
+
+  type induction_clause = Tac2types.induction_clause
+
+  let induct_on ?as_pattern ?eqn ?where on =
+    let as_pattern =
+      match as_pattern with
+      | Some (IntroAction (IntroOrAndPattern x)) -> Some x
+      | Some _ -> assert false (* By static type *)
+      | None -> None
+    in
+    let eqn =
+      match eqn with
+      | Some (IntroNaming x) -> Some x
+      | Some _ -> assert false (* By static type *)
+      | None -> None
+    in
+    mk_induction_arg on, eqn, as_pattern, where
+end
+
 (** {2 Standard tactics} *)
 
 module Ltac2Std = struct
-  type hypothesis = Tac2types.quantified_hypothesis
-  type bindings = Tac2types.bindings
-  type constr_with_bindings = Tac2types.constr_with_bindings
-  type occurrences = Tac2types.occurrences
-  type hyp_location_flag = Tac2types.hyp_location_flag
-  type clause = Tac2types.clause
-  type reference = GlobRef.t
-  type strength = Genredexpr.strength
-  [%%if rocq >= (9, 2)]
-  type red_flags = Tac2types.red_flag
-  [%%else]
-  type red_flags = reference Genredexpr.glob_red_flag
-  [%%endif]
-  type intro_pattern = Tac2types.intro_pattern
-  and intro_pattern_naming = Tac2types.intro_pattern_naming
-  and intro_pattern_action = Tac2types.intro_pattern_action
-  and or_and_intro_pattern = Tac2types.or_and_intro_pattern
-  type destruction_arg = Tac2types.destruction_arg
-  type induction_clause = Tac2types.induction_clause
-  type assertion = Tac2types.assertion
-  type repeat = Equality.multi
-  type orientation = Tac2types.orientation
-  type rewriting = Tac2types.rewriting
-  type evar_flag = Tac2types.evars_flag
-  type move_location = Id.t Logic.move_location
-  type inversion_kind = Inv.inversion_kind
+  let intro ?name ?(where = Syntax.At_bottom) () =
+    Tactics.intro_move name (Syntax.mk_move_location where)
 
-  let intro ?name ?(where = Logic.MoveLast) () =
-    Tactics.intro_move name where
+  let intros ?(e = false) patterns = Tac2tactics.intros_patterns e patterns
 
-  let intros ?(e = false) ?(patterns = []) () = Tac2tactics.intros_patterns e patterns
+  let apply ?(e = false) ?in_hyp_as terms =
+    let terms = List.map (fun t ->
+                       let t = Syntax.mk_constr_with_bindings t in
+                       thunk Tac2extffi.constr_with_bindings t) terms in
+    Tac2tactics.apply true e terms in_hyp_as
 
-  let apply ?(e = false) ?in_hyp_as bindings =
-    let bindings = List.map (thunk Tac2extffi.constr_with_bindings) bindings in
-    Tac2tactics.apply true e bindings in_hyp_as
+  let elim ?(e = false) ?using c =
+    let c = Syntax.mk_constr_with_bindings c in
+    let using = Option.map Syntax.mk_constr_with_bindings using in
+    Tac2tactics.elim e c using
 
-  let elim ?(e = false) ?using c = Tac2tactics.elim e c using
+  let case ?(e = false) c =
+    Tac2tactics.general_case_analysis e (Syntax.mk_constr_with_bindings c)
 
-  let case ?(e = false) c = Tac2tactics.general_case_analysis e c
+  let generalize l =
+    let l = List.map (fun (c, occs, name) -> (c, Syntax.mk_occurrences occs, name)) l in
+    Tac2tactics.generalize l
 
-  let generalize = Tac2tactics.generalize
+  let assert_ ?as_pattern ?by c =
+    (* TODO: This is fishy. *)
+    let by =
+      match by with
+      | None -> None
+      | Some _ -> Some by
+    in
+    Tac2tactics.forward true by as_pattern c
 
-  let assert_ = Tac2tactics.assert_
   let enough ?as_pattern ?by c =
     Tac2tactics.forward false (Some by) as_pattern c
 
@@ -1036,33 +1253,69 @@ module Ltac2Std = struct
     Proofview.tclEVARMAP >>= fun sigma ->
     Tac2tactics.letin_pat_tac e None name (Some sigma, c) where
 
-  let remember ?(e = false) ?as_name ?(eqn = IntroAnonymous) ?(where = default_everywhere) c =
+  let remember ?(e = false) ?as_name ?(eqn = Syntax.(??)) ?(where = default_everywhere) c =
+    (* By the invariants on [naming_intropattern], it must be [IntroNaming]. *)
+    let eqn = match eqn with IntroNaming eqn -> eqn | _ -> assert false in
     let as_name = match as_name with Some id -> Name id | None -> Anonymous in
     Proofview.tclEVARMAP >>= fun sigma ->
     Tac2tactics.letin_pat_tac e (Some (true, eqn)) as_name (Some sigma, c) where
 
-  let destruct ?(e = false) ?using is = Tac2tactics.induction_destruct false e is using
+  let destruct ?(e = false) ?using is =
+    let using = Option.map Syntax.mk_constr_with_bindings using in
+    Tac2tactics.induction_destruct false e is using
 
-  let induction ?(e = false) ?using is = Tac2tactics.induction_destruct true e is using
+  let induction ?(e = false) ?using is =
+    let using = Option.map Syntax.mk_constr_with_bindings using in
+    Tac2tactics.induction_destruct true e is using
 
   let exfalso = Tactics.exfalso
 
   [%%if rocq >= (9, 1)]
   module Red = struct
+    type delta_red =
+      | Only of reference list
+      | Except of reference list
+
+    let only cs = Only cs
+    let except cs = Except cs
+    let all = except []
+
+    type red_flag = reference Genredexpr.red_atom
+
+    open Genredexpr
+
+    let head = FHead
+    let beta = FBeta
+    let delta = function
+      | Only cs -> FConst cs
+      | Except cs -> FDeltaBut cs
+    let match_ = FMatch
+    let fix = FFix
+    let cofix = FCofix
+    let iota = [FMatch; FFix; FCofix] (* iota is a pseudo red_flag *)
+    let zeta = FZeta
+    let all_flags ~head =
+      let full = [beta; delta all; match_; fix; cofix; zeta] in
+      if head then FHead :: full else full
+
     type t = Redexpr.red_expr
+
+    let make_red_context where =
+      let f (c, occs) = c, Syntax.mk_occurrences occs in
+      Option.map f where
 
     let red = Genredexpr.Red
     let hnf = Genredexpr.Hnf
-    let simpl ?where flags = Tac2tactics.simpl flags where
-    let cbv = Tac2tactics.cbv
-    let cbn = Tac2tactics.cbn
-    let lazy_ = Tac2tactics.lazy_
-    let unfold = Tac2tactics.unfold
+    let simpl ?where flags = Tac2tactics.simpl (Redops.make_red_flag flags) (make_red_context where)
+    let cbv flags = Tac2tactics.cbv (Redops.make_red_flag flags)
+    let cbn flags = Tac2tactics.cbn (Redops.make_red_flag flags)
+    let lazy_ flags = Tac2tactics.lazy_ (Redops.make_red_flag flags)
+    let unfold l = Tac2tactics.unfold (List.map (fun (r, o) -> r, Syntax.mk_occurrences o) l)
     let fold cs = Genredexpr.Fold cs
-    let pattern = Tac2tactics.pattern
+    let pattern l = Tac2tactics.pattern (List.map (fun (c, o) -> c, Syntax.mk_occurrences o) l)
 
-    let vm ?where () = Tac2tactics.vm where
-    let native ?where () = Tac2tactics.native where
+    let vm ?where () = Tac2tactics.vm (make_red_context where)
+    let native ?where () = Tac2tactics.native (make_red_context where)
   end
 
   let eval_in = Tac2tactics.reduce_in
@@ -1105,16 +1358,21 @@ module Ltac2Std = struct
     let by = Option.map (thunk' Tac2ffi.unit) by in
     Tac2tactics.rewrite e rewrites where by
 
-  let setoid_rewrite ?(ltr = true) ?in_hyp t where = Tac2tactics.setoid_rewrite ltr (return t) where in_hyp
+  let setoid_rewrite ?(orient = Syntax.(-->)) ?in_hyp t where =
+    let where = Syntax.mk_occurrences where in
+    let t = Syntax.mk_constr_with_bindings t in
+    Tac2tactics.setoid_rewrite (orient = Syntax.(-->)) (return t) where in_hyp
 
-  let inversion ?(kind = Inv.FullInversion) ?as_pattern ?in_hyps arg =
+  let inversion ?(kind = Syntax.Full) ?as_pattern ?in_hyps arg =
+    let kind = Syntax.mk_inversion_kind kind in
+    let arg = Syntax.mk_induction_arg arg in
     Tac2tactics.inversion kind arg as_pattern in_hyps
 
   let reflexivity = Tactics.intros_reflexivity
 
-  let move = Tactics.move_hyp
+  let move x move_loc = Tactics.move_hyp x (Syntax.mk_move_location move_loc)
 
-  let specialize ?as_pattern t = Tac2tactics.specialize t as_pattern
+  let specialize ?as_pattern t = Tac2tactics.specialize (Syntax.mk_constr_with_bindings t) as_pattern
 
   let assumption ?(e = false) () =
     if e then Eauto.e_assumption else Tactics.assumption
@@ -1124,23 +1382,23 @@ module Ltac2Std = struct
 
   let cut = Tactics.cut
 
-  let left ?(e = false) ?(bindings = NoBindings) () = Tac2tactics.left_with_bindings e bindings
-  let right ?(e = false) ?(bindings = NoBindings) () = Tac2tactics.right_with_bindings e bindings
+  let left ?(e = false) ?(with_ = Syntax.No_bindings) () = Tac2tactics.left_with_bindings e (Syntax.mk_bindings with_)
+  let right ?(e = false) ?(with_ = Syntax.No_bindings) () = Tac2tactics.right_with_bindings e (Syntax.mk_bindings with_)
 
-  let intros_until = Tactics.intros_until
+  let intros_until h = Tactics.intros_until (Syntax.mk_hypothesis h)
 
   let exact_no_check = Tactics.exact_no_check
   let vm_cast_no_check = Tactics.vm_cast_no_check
   let native_cast_no_check = Tactics.native_cast_no_check
 
-  let constructor ?(e = false) ?n ?(bindings = NoBindings) () =
+  let constructor ?(e = false) ?n ?(with_ = Syntax.No_bindings) () =
     match n with
-    | Some n -> Tac2tactics.constructor_tac e None n bindings
+    | Some n -> Tac2tactics.constructor_tac e None n (Syntax.mk_bindings with_)
     | None -> Tactics.any_constructor e None
 
   let symmetry ?(where = default_on_conclusion) () = Tac2tactics.symmetry where
 
-  let split ?(e = false) ?(bindings = NoBindings) () = Tac2tactics.split_with_bindings e bindings
+  let split ?(e = false) ?(with_ = Syntax.No_bindings) () = Tac2tactics.split_with_bindings e (Syntax.mk_bindings with_)
   let rename = Tactics.rename_hyp
 
   let revert = Generalize.revert
@@ -1158,11 +1416,13 @@ module Ltac2Std = struct
   let keep = Tactics.keep
   let clearbody = Tactics.clear_body
 
-  let discriminate ?(e = false) ?arg () = Tac2tactics.discriminate e arg
-  let injection ?(e = false) ?arg ?as_patterns () = Tac2tactics.injection e as_patterns arg
+  let discriminate ?(e = false) ?arg () =
+    Tac2tactics.discriminate e (Option.map Syntax.mk_induction_arg arg)
+  let injection ?(e = false) ?arg ?as_patterns () =
+    Tac2tactics.injection e as_patterns (Option.map Syntax.mk_induction_arg arg)
 
   let absurd = Contradiction.absurd
-  let contradiction ?witness () = Tac2tactics.contradiction witness
+  let contradiction ?witness () = Tac2tactics.contradiction (Option.map Syntax.mk_constr_with_bindings witness)
 
   let autorewrite ~all ?(where = default_on_conclusion) ?using dbs =
     let using = Option.map (thunk' Tac2ffi.unit) using in
@@ -1217,6 +1477,7 @@ end
 (** {1 Ltac2 API} *)
 
 (** Built-in types *)
+
 type ident = Id.t
 type evar = Evar.t
 type cast = Constr.cast_kind
