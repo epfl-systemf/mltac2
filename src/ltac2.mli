@@ -748,12 +748,15 @@ module Pattern : sig
   val empty_context : context
   (** A trivial context only made of the hole. *)
 
-  val matches : Environ.env -> Evd.evar_map -> pattern -> constr -> Ltac_pretype.patvar_map option
+  type substitution = EConstr.t Id.Map.t
+  (** A substitution is a mapping from pattern variables to terms. *)
+
+  val matches : Environ.env -> Evd.evar_map -> pattern -> constr -> substitution option
   (** [matches env sigma pattern t] tries matching [t] against [pattern], and
       returns the assignment of pattern variables, or [None] if pattern-matching
       failed. *)
 
-  val matches_subterm : pattern -> constr -> (context * Ltac_pretype.patvar_map) tactic
+  val matches_subterm : pattern -> constr -> (context * substitution) tactic
   (** [matches_subterm pattern t] returns a stream of results corresponding to
       all of the subterms of [t] that matches [pattern] as in [matches], in the
       current goal. The stream is encoded as a backtracking value whose last
@@ -761,11 +764,35 @@ module Pattern : sig
       value compared to [matches] is the context of the match, to be filled with
       the [instantiate] function. *)
 
-  val matches_goal :
-    ?reverse:bool ->
-    Tac2match.match_context_hyps list ->
-    Tac2match.match_pattern ->
-    ((ident * context option option * context option) list * context option * Ltac_pretype.patvar_map) tactic
+  type match_pattern = private ..
+  (** Patterns used in goal-matching. *)
+
+  type match_pattern +=
+     | Pattern of pattern (** Matches the whole term. *)
+     | Context of pattern (** Matches a subterm. *)
+
+  type hyp_match_pattern
+  (** Patterns used to match over a hypothesis. *)
+
+  val match_hyp : ?body:match_pattern -> match_pattern -> hyp_match_pattern
+  (** [match_hyp ?body t] matches the type of a hypothesis with [t], and the
+      body of the hypothesis with [body], if specified. *)
+
+  (** Result of matching over a hypothesis. *)
+  type hyp_match_result = private
+    { name: ident;                  (** Name of the hypothesis matched. *)
+      body_context: context option; (** Context where the body matched, if any. *)
+      type_context: context option  (** Context in which the type of the hypothesis matched. *)
+    }
+
+  (** Result of matching over goals. *)
+  type goal_match_result = private
+    { hyps: hyp_match_result list; (** List of hypothesis match results. *)
+      context: context option;     (** Context where the conclusion matched, if any. *)
+      substitution: substitution   (** Substitution of pattern matching. *)
+    }
+
+  val matches_goal : ?reverse:bool -> hyp_match_pattern list -> match_pattern -> goal_match_result tactic
   (** Given a list of patterns [hpats] for hypotheses and one pattern [cpat] for
       the conclusion, [matches_goal ?reverse hpats cpat] produces (a stream of):
 

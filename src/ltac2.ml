@@ -283,6 +283,8 @@ module Ltac2Pattern = struct
     Constr_matching.instantiate_pattern env sigma Id.Map.empty pat
   [%%endif]
 
+  type substitution = EConstr.t Id.Map.t
+
   let matches env sigma pat c =
     try Some (Constr_matching.matches env sigma pat c)
     with Constr_matching.PatternMatchingFailure -> None
@@ -300,12 +302,47 @@ module Ltac2Pattern = struct
       of_ans ans
     end
 
+  type match_pattern = ..
+  type match_pattern +=
+     | Pattern of Pattern.constr_pattern
+     | Context of Pattern.constr_pattern
+
+  let mk_match_pattern = function
+    | Pattern p -> Tac2match.MatchPattern p
+    | Context p -> Tac2match.MatchContext p
+    | _ -> assert false
+
+  type hyp_match_pattern = Tac2match.match_context_hyps
+
+  let match_hyp ?body typ =
+    Option.map mk_match_pattern body, mk_match_pattern typ
+
+  type hyp_match_result =
+    { name: Id.t;
+      body_context: context option;
+      type_context: context option
+    }
+
+  let mk_hyp_match_result (name, body_context, type_context) =
+    { name; body_context = Option.flatten body_context; type_context }
+
+  type goal_match_result =
+    { hyps: hyp_match_result list;
+      context: context option;
+      substitution: substitution
+    }
+
+  let mk_goal_match_result (hyp_results, context, substitution) =
+    { hyps = List.map mk_hyp_match_result hyp_results; context; substitution }
+
   let matches_goal ?(reverse = false) hp cp =
+    let cp = mk_match_pattern cp in
     Proofview.Goal.enter_one begin fun gl ->
       let env = Proofview.Goal.env gl in
       let sigma = Proofview.Goal.sigma gl in
       let concl = Proofview.Goal.concl gl in
-      Tac2match.match_goal env sigma concl ~rev:reverse (hp, cp)
+      let results = Tac2match.match_goal env sigma concl ~rev:reverse (hp, cp) in
+      Proofview.tclBIND results (fun result -> return (mk_goal_match_result result))
     end
 
   let instantiate = Constr_matching.instantiate_context
