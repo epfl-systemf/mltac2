@@ -1552,10 +1552,10 @@ module Std : sig
     ?where:clause ->
     constr ->
     unit tactic
-  (** [remember ?e t ?as_name ?eqn ?where] is similar to [set ?e as_ t ?where]
+  (** [remember ?e t ?as_name ?eqn ?where] is similar to [set ?e as_name t ?where]
       but creates a hypothesis using Leibniz equality to remember the relation
       between the introduced variable and the term rather than creating a local
-      definition. If [as_] is not specified a fresh name is used. Use [eqn]
+      definition. If [as_name] is not specified a fresh name is used. Use [eqn]
       to name the new equation.
 
       @param e (default = [false])
@@ -1580,7 +1580,7 @@ module Std : sig
   (** {3 Controlling the proof flow} *)
 
   val assert_ : ?as_pattern:simple intropattern -> ?by:unit tactic -> constr -> unit tactic
-  (** [assert_ assertion] adds a new hypothesis to the current subgoal and a new subgoal
+  (** [assert_ t ?as_pattern ?by] adds a new hypothesis to the current subgoal and a new subgoal
       before it to prove the hypothesis.
 
       Note: this version of [assert] does not fail on uninstantiated existential variables.
@@ -2073,7 +2073,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.discriminate> Reference manual *)
 
   val injection : ?e:bool -> ?arg:induction_arg -> ?as_patterns:simple intropattern list -> unit -> unit tactic
-  (** [injection () ?e ?ipat ?arg] exploits the property that constructors of
+  (** [injection ?e ?as_patterns ?arg ()] exploits the property that constructors of
       inductive types are injective, i.e. that if [c] is a constructor of an inductive
       type and [c t1 = c t2] then [t1 = t2] are equal too.
 
@@ -2097,15 +2097,15 @@ module Std : sig
     ?in_hyps:ident list ->
     induction_arg ->
     unit tactic
-  (** [inversion ?kind arg ?as_pattern ?ids] performs inversion on the given term
+  (** [inversion ?kind arg ?as_pattern ?in_hyps] performs inversion on the given term
       [arg] using the specified [kind] of inversion. Inversion generates
       equations for all constructors of the inductive type of [arg] and
       proves the goal by case analysis.
 
-      @param kind (default = [FullInversion])
-        The inversion depth: [SimpleInversion] does not clear hypotheses,
-        [FullInversion] clears trivially equal hypotheses, and
-        [FullInversionClear] additionally clears inverted hypotheses.
+      @param kind (default = [Syntax.Full])
+        The inversion depth: [Simple] does not clear hypotheses, [Full] clears
+        trivially equal hypotheses, and [Full_clear] additionally clears
+        inverted hypotheses.
 
       @param as_pattern (default = [None])
         An intro pattern for naming the generated hypotheses.
@@ -2118,7 +2118,7 @@ module Std : sig
   (** {3 Solvers for logic and equality} *)
 
   val congruence : ?n:int -> ?hints:constr list -> unit -> unit tactic
-  (** [congruence () ?n ?hints] solves the current goal using the congruence
+  (** [congruence ?n ?hints ()] solves the current goal using the congruence
       closure algorithm, which reasons about equations between constructors and
       function applications.
 
@@ -2131,7 +2131,7 @@ module Std : sig
       @see <https://rocq-prover.org/doc/master/refman/proofs/automatic-tactics/logic.html> Reference manual *)
 
   val simple_congruence : ?n:int -> ?hints:constr list -> unit -> unit tactic
-  (** [simple_congruence () ?n ?hints] behaves like {!val:congruence} but does not unfold definitions.
+  (** [simple_congruence ?n ?hints ()] behaves like {!val:congruence} but does not unfold definitions.
 
       @param n (default = [None])
         An optional depth limit for the search.
