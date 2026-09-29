@@ -1270,8 +1270,8 @@ module Ltac2Std = struct
 
   let pose name c = Tactics.letin_tac None name c None Locusops.nowhere
 
-  let default_on_conclusion: clause = { onhyps = Some []; concl_occs = AllOccurrences }
-  let default_everywhere: clause = { onhyps = None; concl_occs = AllOccurrences }
+  let default_on_conclusion = Syntax.(Nowhere |- Everywhere)
+  let default_everywhere = Syntax.(Everywhere |- Everywhere)
 
   let set ?(e = false) ?(where = default_on_conclusion) name c =
     Proofview.tclEVARMAP >>= fun sigma ->
