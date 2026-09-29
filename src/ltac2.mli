@@ -179,7 +179,7 @@ module Constr : sig
       val constr_flags : t
       (** Flags used by [constr:(…)]. *)
 
-      val set_use_coercion : bool -> t -> t
+      val set_use_coercions : bool -> t -> t
       (** Sets use of coercions during pretyping.
 
           [true] in [constr_flags]. *)
