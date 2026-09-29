@@ -9,9 +9,28 @@ open Ltac2_plugin
 open Tac2types
 open Proofview.Notations
 
-let return = Proofview.tclUNIT
+(** {1 Built-in types} *)
 
+type ident = Id.t
+type evar = Evar.t
+type cast = Constr.cast_kind
+type constant = Constant.t
+type inductive = Ind.t
+type constructor = Construct.t
+type projection = Projection.t
+type pattern = Pattern.constr_pattern
+type constr = EConstr.t
+type preterm = Ltac_pretype.closed_glob_constr
+type binder = Name.t EConstr.binder_annot * EConstr.types
+type message = Pp.t
 type reference = GlobRef.t
+type err = Exninfo.iexn
+type iexn = Exninfo.iexn
+type exninfo = Exninfo.info
+
+(** {1 Helpers} *)
+
+let return = Proofview.tclUNIT
 
 [%%if rocq >= (9, 1)]
 let to_fun1 _ _ (f : 'a -> 'b) : ('a, 'b) Tac2ffi.fun1 =
@@ -98,7 +117,7 @@ end
 (** {2 Identifiers} *)
 
 module Ltac2Ident = struct
-  type t = Id.t
+  type t = ident
   let equal = Id.equal
 
   let to_string = Id.to_string
@@ -111,7 +130,7 @@ end
 (** {2 Terms} *)
 
 module Ltac2Constr = struct
-  type t = EConstr.t
+  type t = constr
 
   let type_ env sigma c =
     Typing.type_of env sigma c
@@ -285,7 +304,7 @@ module Ltac2Pattern = struct
     Constr_matching.instantiate_pattern env sigma Id.Map.empty pat
   [%%endif]
 
-  type substitution = EConstr.t Id.Map.t
+  type substitution = constr Id.Map.t
 
   let matches env sigma pat c =
     try Some (Constr_matching.matches env sigma pat c)
@@ -306,8 +325,8 @@ module Ltac2Pattern = struct
 
   type match_pattern = ..
   type match_pattern +=
-     | Pattern of Pattern.constr_pattern
-     | Context of Pattern.constr_pattern
+     | Pattern of pattern
+     | Context of pattern
 
   let mk_match_pattern = function
     | Pattern p -> Tac2match.MatchPattern p
@@ -320,7 +339,7 @@ module Ltac2Pattern = struct
     Option.map mk_match_pattern body, mk_match_pattern typ
 
   type hyp_match_result =
-    { name: Id.t;
+    { name: ident;
       body_context: context option;
       type_context: context option
     }
@@ -783,7 +802,7 @@ module Ltac2Module = struct
   module Field = struct
     type t = ..
     type t +=
-       | Ref of GlobRef.t
+       | Ref of reference
        | Submodule of ModPath.t
        | Rewrule
   end
@@ -992,7 +1011,7 @@ module Syntax = struct
 
   type hypothesis = .. (** Extensible version of [Tac2types.quantified_hypothesis]. *)
   type hypothesis +=
-     | Named_hyp of Id.t
+     | Named_hyp of ident
      | Nth_hyp of int
 
   let mk_hypothesis = function
@@ -1009,8 +1028,8 @@ module Syntax = struct
   type bindings = .. (** Extensible version of [Tac2types.bindings]. *)
   type bindings +=
      | No_bindings
-     | Implicit of EConstr.t list
-     | Explicit of (hypothesis * EConstr.t) list
+     | Implicit of constr list
+     | Explicit of (hypothesis * constr) list
 
   let mk_bindings = function
     | No_bindings -> Tac2types.NoBindings
@@ -1018,7 +1037,7 @@ module Syntax = struct
     | Explicit l -> Tac2types.ExplicitBindings (List.map (fun (h, c) -> mk_hypothesis h, c) l)
     | _ -> assert false
 
-  type constr_with_bindings = { t: EConstr.t; bindings: bindings }
+  type constr_with_bindings = { t: constr; bindings: bindings }
 
   let term t = { t; bindings = No_bindings }
 
@@ -1091,9 +1110,9 @@ module Syntax = struct
 
   type hypothesis_selector = .. (** See [Tac2types.hyp_location_flag]. *)
   type hypothesis_selector +=
-     | Hyp of Id.t
-     | Type_of of Id.t
-     | Value_of of Id.t
+     | Hyp of ident
+     | Type_of of ident
+     | Value_of of ident
 
   type clause = Tac2types.clause
 
@@ -1124,8 +1143,8 @@ module Syntax = struct
   type move_location +=
      | At_top
      | At_bottom
-     | Before of Id.t
-     | After of Id.t
+     | Before of ident
+     | After of ident
 
   let mk_move_location = function
     | At_top -> Logic.MoveFirst
@@ -1474,25 +1493,7 @@ module Ltac2Std = struct
   [%%endif]
 end
 
-(** {1 Ltac2 API} *)
-
-(** Built-in types *)
-
-type ident = Id.t
-type evar = Evar.t
-type cast = Constr.cast_kind
-type constant = Constant.t
-type inductive = Ind.t
-type constructor = Construct.t
-type projection = Projection.t
-type pattern = Pattern.constr_pattern
-type constr = EConstr.t
-type preterm = Ltac_pretype.closed_glob_constr
-type binder = Name.t EConstr.binder_annot * EConstr.types
-type message = Pp.t
-type err = Exninfo.iexn
-type iexn = Exninfo.iexn
-type exninfo = Exninfo.info
+(** {1 Module aliases} *)
 
 module Constant         = Ltac2Constant
 module Constr           = Ltac2Constr
