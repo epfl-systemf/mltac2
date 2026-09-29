@@ -136,35 +136,35 @@ let test_remember_at_neg t =
 
 (** [rewrite eq] *)
 let test_rewrite eq =
-  rewrite [rewriting eq]
+  rewrite [(==>) eq]
 
 (** [rewrite eq with (x := y)] *)
 let test_rewrite_with eq x y=
-  rewrite [rewriting eq ~with_:(Explicit [Named_hyp x, y])]
+  rewrite [(==>) eq ~with_:(Explicit [Named_hyp x, y])]
 
 (** [rewrite -> eq] *)
 let test_rewrite_ltr eq =
-  rewrite [rewriting eq ~orient:((-->))]
+  rewrite [(==>) eq]
 
 (** [rewrite <- eq] *)
 let test_rewrite_rtl eq =
-  rewrite [rewriting eq ~orient:((<--))]
+  rewrite [(<==) eq]
 
 (** [rewrite 2 eq] *)
 let test_rewrite_n eq =
-  rewrite [rewriting eq ~n:(Exactly 2)]
+  rewrite [(==>) ~n:(Exactly 2) eq]
 
 (** [rewrite 2? eq] *)
 let test_rewrite_at_most_n eq =
-  rewrite [rewriting eq ~n:(At_most 2)]
+  rewrite [(==>) ~n:(At_most 2) eq]
 
 (** [rewrite ? eq] *)
 let test_rewrite_star eq =
-  rewrite [rewriting eq ~n:Star]
+  rewrite [(==>) ~n:Star eq]
 
 (** [rewrite ! eq] *)
 let test_rewrite_plus eq =
-  rewrite [rewriting eq ~n:Plus]
+  rewrite [(==>) ~n:Plus eq]
 
 (** {1 [induction] *)
 

@@ -1356,20 +1356,25 @@ module Syntax : sig
      | Star           (** [Star] performs a rewrite as many times as possible, possibly zero. *)
      | Plus           (** [Plus] performs a rewrite as many times as possible and at least once. *)
 
-  type rewriting
+  type oriented_rewriter
   (** Types of rewriting for the {!val:Std.rewrite} tactic. *)
 
-  val rewriting : ?orient:orientation intropattern -> ?n:multiplicity -> ?with_:bindings -> constr -> rewriting
-  (** [rewriting ?orient e ?n ?with_] rewrites using equality or equivalence
-      [e].
+  val ( ==> ) : ?n:multiplicity -> ?with_:bindings -> constr -> oriented_rewriter
+  (** [(==>) ?n e ?with_] rewrites using equality or equivalence [e], of the form
+      [forall …, term₁ = term₂] or [forall …, term₁ EQ term₂] for some
+      equivalence relation [EQ], by replacing [term₁] with [term₂].
 
-      @param e
-        Equality or equivalence to use, of the form [forall …, term₁ = term₂]
-        or [forall …, term₁ EQ term₂] for some equivalence relation [EQ].
+      @param n (default = [Exactly 1])
+        Number of rewrites to perform.
 
-      @param orient (default = [(-->)])
-        If equal to [(-->)], rewrites [term₁] into [term₂].
-        If equal to [(<--)], rewrites [term₂] into [term₁].
+      @param with_ (default = [No_bindings])
+        Bindings to use.
+   *)
+
+  val ( <== ) : ?n:multiplicity -> ?with_:bindings -> constr -> oriented_rewriter
+  (** [(<==) ?n e ?with_] rewrites using equality or equivalence [e], of the form
+      [forall …, term₁ = term₂] or [forall …, term₁ EQ term₂] for some
+      equivalence relation [EQ], by replacing [term₂] with [term₁].
 
       @param n (default = [Exactly 1])
         Number of rewrites to perform.
@@ -1731,7 +1736,7 @@ module Std : sig
 
   (** {4 Rewriting with Leibniz and setoid equality} *)
 
-  val rewrite : ?e:bool -> ?where:clause -> ?by:unit tactic -> rewriting list -> unit tactic
+  val rewrite : ?e:bool -> ?where:clause -> ?by:unit tactic -> oriented_rewriter list -> unit tactic
   (** [rewrite rs ?e ?where ?by] replaces subterms with other subterms that have been proven to be equal
       or logically equivalent.
 

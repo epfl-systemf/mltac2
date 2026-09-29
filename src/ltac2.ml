@@ -1183,10 +1183,15 @@ module Syntax = struct
     | Plus -> Equality.RepeatPlus
     | _ -> assert false
 
-  type rewriting = Tac2types.rewriting
+  type oriented_rewriter = Tac2types.rewriting
 
-  let rewriting ?orient ?(n = Exactly 1) ?(with_ = No_bindings) t =
-    Option.map ((=) (-->)) orient,
+  let (==>) ?(n = Exactly 1) ?(with_ = No_bindings) t =
+    Some true,
+    mk_multiplicity n,
+    return (mk_constr_with_bindings { t; bindings = with_ })
+
+  let (<==) ?(n = Exactly 1) ?(with_ = No_bindings) t =
+    Some false,
     mk_multiplicity n,
     return (mk_constr_with_bindings { t; bindings = with_ })
 
