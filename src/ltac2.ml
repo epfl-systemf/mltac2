@@ -156,7 +156,7 @@ module Ltac2Constr = struct
     let closenl sigma ids k c =
       EConstr.Vars.substn_vars sigma k ids c
 
-    let closednl sigma n c =
+    let closedn sigma n c =
       EConstr.Vars.closedn sigma n c
 
     let noccur_between sigma n m c =

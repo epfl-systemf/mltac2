@@ -127,8 +127,8 @@ module Constr : sig
         replaces them with [Rel(k); …; Rel(k+n-1)] in [t]. If two names are identical,
         the one of least index is kept. *)
 
-    val closednl : Evd.evar_map -> int -> t -> bool
-    (** [closednl sigma n t] is [true] iff [t] is a closed term under [n] binders. *)
+    val closedn : Evd.evar_map -> int -> t -> bool
+    (** [closedn sigma n t] is [true] iff [t] is a closed term under [n] binders. *)
 
     val noccur_between : Evd.evar_map -> int -> int -> t -> bool
     (** [noccur_between sigma n m t] returns [true] iff [Rel p] does not occur
