@@ -1389,25 +1389,41 @@ module Syntax : sig
         Reference manual, "Case analysis"
    *)
 
-  type induction_arg = private ..
-  (** @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#grammar-token-induction_arg>
-        Reference manual, induction_arg *)
+  module Induction_arg : sig
+    type t
+    (** @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#grammar-token-induction_arg>
+          Reference manual, induction_arg *)
 
-  type induction_arg +=
-     | On_constr of constr_with_bindings (** [On_constr t] performs induction/case analysis on [t]. *)
-     | On_hyp of hypothesis              (** [On_hyp h] performs induction/case analysis on hypothesis [h]. *)
+    val on_constr : constr_with_bindings -> t
+    (** [on_constr t] performs induction/case analysis on [t]. *)
 
-  type induction_clause
-  (** @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#grammar-token-induction_clause>
-        Reference manual, induction_clause *)
+    val on_hyp : hypothesis -> t
+    (** [on_hyp h] performs induction/case analysis on hypothesis [h]. *)
+  end
 
-  val induct_on :
-    ?as_pattern:or_and intropattern ->
-    ?eqn:naming intropattern ->
-    ?where:clause ->
-    induction_arg ->
-    induction_clause
-  (** [induct_on arg ?as_pattern ?eqn ?where] describes an induction clause. *)
+  module Induction_clause : sig
+    type t
+    (** @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#grammar-token-induction_clause>
+          Reference manual, induction_clause *)
+
+    val on_constr :
+      ?as_pattern:or_and intropattern ->
+      ?eqn:naming intropattern ->
+      ?where:clause ->
+      constr_with_bindings ->
+      t
+    (** [on_constr t ?as_pattern ?eqn ?where] builds an induction clause that performs
+        induction on [t]. *)
+
+    val on_hyp :
+      ?as_pattern:or_and intropattern ->
+      ?eqn:naming intropattern ->
+      ?where:clause ->
+      hypothesis ->
+      t
+    (** [on_hyp h ?as_pattern ?eqn ?where] builds an induction clause that performs
+        induction on hypothesis [h]. *)
+  end
 end
 
 (** {2 Standard tactics} *)
@@ -1986,7 +2002,7 @@ module Std : sig
 
   (** {4 Case analysis} *)
 
-  val destruct : ?e:bool -> ?using:constr_with_bindings -> induction_clause list -> unit tactic
+  val destruct : ?e:bool -> ?using:constr_with_bindings -> Induction_clause.t list -> unit tactic
   (** [destruct clauses ?e ?using] perform case analysis on each clause in
       [clauses], generating a subgoal for each of the constructors of the inductive type.
 
@@ -2014,7 +2030,7 @@ module Std : sig
 
   (** {4 Induction} *)
 
-  val induction : ?e:bool -> ?using:constr_with_bindings -> induction_clause list -> unit tactic
+  val induction : ?e:bool -> ?using:constr_with_bindings -> Induction_clause.t list -> unit tactic
   (** [induction clauses ?e ?using] applies induction principles to each clause in
       [clauses], left to right.
 
@@ -2057,7 +2073,7 @@ module Std : sig
 
   (** {4 Equality of inductive types} *)
 
-  val discriminate : ?e:bool -> ?arg:induction_arg -> unit -> unit tactic
+  val discriminate : ?e:bool -> ?arg:Induction_arg.t -> unit -> unit tactic
   (** [discriminate ?e ?arg ()] proves the current goal by discriminating an
       equality between two constructors of the same inductive type. The
       argument [arg] specifies which hypothesis or term to discriminate.
@@ -2072,7 +2088,7 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/reasoning-inductives.html#rocq:tacn.discriminate> Reference manual *)
 
-  val injection : ?e:bool -> ?arg:induction_arg -> ?as_patterns:simple intropattern list -> unit -> unit tactic
+  val injection : ?e:bool -> ?arg:Induction_arg.t -> ?as_patterns:simple intropattern list -> unit -> unit tactic
   (** [injection ?e ?as_patterns ?arg ()] exploits the property that constructors of
       inductive types are injective, i.e. that if [c] is a constructor of an inductive
       type and [c t1 = c t2] then [t1 = t2] are equal too.
@@ -2095,7 +2111,7 @@ module Std : sig
     ?kind:inversion_kind ->
     ?as_pattern:or_and intropattern ->
     ?in_hyps:ident list ->
-    induction_arg ->
+    Induction_arg.t ->
     unit tactic
   (** [inversion ?kind arg ?as_pattern ?in_hyps] performs inversion on the given term
       [arg] using the specified [kind] of inversion. Inversion generates

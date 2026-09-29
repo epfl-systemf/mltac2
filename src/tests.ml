@@ -168,18 +168,20 @@ let test_rewrite_plus eq =
 
 (** {1 [induction] *)
 
+open Induction_clause
+
 (** [induction H] *)
 let test_induction h =
-  induction [induct_on (On_hyp h)]
+  induction [on_hyp h]
 
 (** [induction c] *)
 let test_induction_constr c =
-  induction [induct_on (On_constr c)]
+  induction [on_constr c]
 
 (** [induction H using p] *)
 let test_induction_using h p =
-  induction [induct_on (On_hyp h)] ~using:p
+  induction [on_hyp h] ~using:p
 
 (** [induction H eqn:x] *)
 let test_induction_eqn h x =
-  induction [induct_on (On_hyp h) ~eqn:x]
+  induction [on_hyp h ~eqn:x]

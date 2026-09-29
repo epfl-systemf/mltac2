@@ -1201,33 +1201,40 @@ module Syntax = struct
         Reference manual, "Case analysis"
    *)
 
-  type induction_arg = .. (** Extensible version of [Tac2types.destruction_arg]. *)
-  type induction_arg +=
-     | On_constr of constr_with_bindings
-     | On_hyp of hypothesis
+  module Induction_arg = struct
+    type t = Tac2types.destruction_arg
 
-  let mk_induction_arg = function
-    | On_constr c -> ElimOnConstr (return (mk_constr_with_bindings c))
-    | On_hyp (Named_hyp h) -> ElimOnIdent h
-    | On_hyp (Nth_hyp n) -> ElimOnAnonHyp n
-    | _ -> assert false
+    let on_constr c = ElimOnConstr (return (mk_constr_with_bindings c))
 
-  type induction_clause = Tac2types.induction_clause
+    let on_hyp = function
+      | Named_hyp h -> ElimOnIdent h
+      | Nth_hyp n -> ElimOnAnonHyp n
+      | _ -> assert false
+  end
 
-  let induct_on ?as_pattern ?eqn ?where on =
-    let as_pattern =
-      match as_pattern with
+  module Induction_clause = struct
+    type t = Tac2types.induction_clause
+
+    let get_as_pattern = function
       | Some (IntroAction (IntroOrAndPattern x)) -> Some x
       | Some _ -> assert false (* By static type *)
       | None -> None
-    in
-    let eqn =
-      match eqn with
+
+    let get_eqn = function
       | Some (IntroNaming x) -> Some x
       | Some _ -> assert false (* By static type *)
       | None -> None
-    in
-    mk_induction_arg on, eqn, as_pattern, where
+
+    let on_constr ?as_pattern ?eqn ?where c =
+      let as_pattern = get_as_pattern as_pattern in
+      let eqn = get_eqn eqn in
+      Induction_arg.on_constr c, eqn, as_pattern, where
+
+    let on_hyp ?as_pattern ?eqn ?where h =
+      let as_pattern = get_as_pattern as_pattern in
+      let eqn = get_eqn eqn in
+      Induction_arg.on_hyp h, eqn, as_pattern, where
+  end
 end
 
 (** {2 Standard tactics} *)
@@ -1389,7 +1396,6 @@ module Ltac2Std = struct
 
   let inversion ?(kind = Syntax.Full) ?as_pattern ?in_hyps arg =
     let kind = Syntax.mk_inversion_kind kind in
-    let arg = Syntax.mk_induction_arg arg in
     Tac2tactics.inversion kind arg as_pattern in_hyps
 
   let reflexivity = Tactics.intros_reflexivity
@@ -1441,9 +1447,9 @@ module Ltac2Std = struct
   let clearbody = Tactics.clear_body
 
   let discriminate ?(e = false) ?arg () =
-    Tac2tactics.discriminate e (Option.map Syntax.mk_induction_arg arg)
+    Tac2tactics.discriminate e arg
   let injection ?(e = false) ?arg ?as_patterns () =
-    Tac2tactics.injection e as_patterns (Option.map Syntax.mk_induction_arg arg)
+    Tac2tactics.injection e as_patterns arg
 
   let absurd = Contradiction.absurd
   let contradiction ?witness () = Tac2tactics.contradiction (Option.map Syntax.mk_constr_with_bindings witness)
