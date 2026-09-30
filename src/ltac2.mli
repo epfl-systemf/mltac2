@@ -355,14 +355,20 @@ module Control : sig
 
       Fails if there is not exactly one goal under focus. *)
 
-  val hyp : Environ.env -> variable -> (constr, unit) result
+  val hyp : Environ.env -> variable -> constr
   (** [hyp env id] looks for the hypothesis or section variable in [env] with
-      the given name. *)
+      the given name.
 
-  val hyp_value : Environ.env -> variable -> (constr option, unit) result
+      @raise Not_found If the hypothesis could not be found in the environment.
+   *)
+
+  val hyp_value : Environ.env -> variable -> constr option
   (** [hyp_value env id] looks for the hypothesis or section variable with the
       given name in [env] and return its value ([v] in [H := v]) if there is
-      one. *)
+      one.
+
+      @raise Not_found If the hypothesis could not be found in the environment.
+   *)
 
   val hyps : Environ.env -> (variable * constr option * constr) list
   (** [hyps env] returns the list of hypotheses and section variables in the
@@ -408,13 +414,16 @@ end
 (** {2 Environment} *)
 
 module Env : sig
-  val get : Libnames.full_path -> (reference, unit) result
+  val get : Libnames.full_path -> reference
   (** [get path] returns the global reference corresponding to the absolute name
-      given as argument, or [Error ()] if it does not exist. *)
+      given as argument
 
-  val path : reference -> (Libnames.full_path, unit) result
-  (** [path ref] returns the absolute name of the given reference, or [Error ()]
-      if the reference does not exist. *)
+      @raise Not_found If the path does not correspond to a reference. *)
+
+  val path : reference -> Libnames.full_path
+  (** [path ref] returns the absolute name of the given reference.
+
+      @raise Not_found If the reference does not exist. *)
 
   val expand : Libnames.qualid -> reference list
   (** [expand qualid] returns the list of all global references whose absolute

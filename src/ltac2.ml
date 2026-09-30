@@ -163,6 +163,7 @@ module Ltac2Constr = struct
       EConstr.Vars.noccur_between sigma n m c
 
     let case env ind =
+      (* TODO: This silently gobbles the error. *)
       try Ok (Inductiveops.make_case_info env ind Constr.MatchStyle)
       with e when CErrors.noncritical e ->
         Error ()
@@ -443,19 +444,18 @@ module Ltac2Control = struct
 
   [%%if rocq >= (9, 2)]
   let hyp env id =
-    if Environ.mem_named id env then Ok (EConstr.mkVar id)
-    else Error ()
+    if Environ.mem_named id env then EConstr.mkVar id
+    else raise Not_found
   [%%else]
   let hyp env id =
     let has_hyp = try ignore (Environ.lookup_named id env); true with Not_found -> false in
-    if has_hyp then Ok (EConstr.mkVar id)
-    else Error ()
+    if has_hyp then EConstr.mkVar id
+    else raise Not_found
   [%%endif]
 
   let hyp_value env id =
-    match EConstr.lookup_named id env with
-    | d -> Ok (Context.Named.Declaration.get_value d)
-    | exception Not_found -> Error ()
+    let d = EConstr.lookup_named id env in
+    Context.Named.Declaration.get_value d
 
   let hyps env =
     let open Context in
@@ -543,15 +543,11 @@ end
 (** {2 Environment} *)
 
 module Ltac2Env = struct
-  let get path =
-    try Ok (Nametab.global_of_path path)
-    with Not_found -> Error ()
+  let get = Nametab.global_of_path
 
   let expand = Nametab.locate_all
 
-  let path r =
-    try Ok (Nametab.path_of_global r)
-    with Not_found -> Error ()
+  let path = Nametab.path_of_global
 
   (* Eta-expanded to remove optional arguments *)
   let instantiate env sigma gr = Evd.fresh_global env sigma gr
