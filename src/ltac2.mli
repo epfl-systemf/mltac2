@@ -1071,12 +1071,13 @@ module Scheme : sig
 
       @since 9.3 *)
 
-  val scase_nodep : kind
+  val scase_dep : kind
   (** Dependent case analysis scheme for SProp.
 
       @since 9.3 *)
 
-  val scase_dep : kind
+
+  val scase_nodep : kind
   (** Non-dependent case analysis scheme for SProp.
 
       @since 9.3 *)
@@ -1522,7 +1523,7 @@ module Std : sig
    *)
 
   val move : ident -> Syntax.move_location -> unit tactic
-  (** [move hyp where] moves [hyp] and hypotheses that directly or directly refer to
+  (** [move hyp where] moves [hyp] and hypotheses that directly or indirectly refer to
       [hyp] that appear between [hyp] and [where].
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.move> Reference manual
@@ -1701,7 +1702,7 @@ module Std : sig
    *)
 
   val vm_cast_no_check : constr -> unit tactic
-  (** For advanced usage. [vm_no_check t] is similar to [exact_no_check t], but
+  (** For advanced usage. [vm_cast_no_check t] is similar to [exact_no_check t], but
       additionally instructs the kernel to use [vm_compute] to compare the
       goal's type with [t]'s type.
 
@@ -2193,7 +2194,7 @@ module Std : sig
       backtracking, which tries to solve the goal by applying hints from the
       specified databases.
 
-      @param debug (default = [Hints.Off])
+      @param debug (default = [Off])
         The debug level. [Off] produces no output, [Info] shows which
         hints were tried, and [Debug] shows detailed proof search.
 
@@ -2214,7 +2215,7 @@ module Std : sig
   (** [eauto refs ?debug ?n ?dbs] applies the eauto proof search algorithm,
       which extends auto with unification hints and e-unification.
 
-      @param debug (default = [Hints.Off])
+      @param debug (default = [Off])
         The debug level. [Off] produces no output, [Info] shows which
         hints were tried, and [Debug] shows detailed proof search.
 
@@ -2237,8 +2238,8 @@ module Std : sig
       automated proof search specialized for typeclass instance resolution.
 
       @param strategy (default = [None])
-        The search strategy: [Some DFS] for depth-first search (default),
-        [Some BFS] for breadth-first search, or [None] for the default.
+        The search strategy: [Some Dfs] for depth-first search,
+        [Some Bfs] for breadth-first search, or [None] for the default.
 
       @param n (default = [None])
         The search depth limit. If not provided, the search is unbounded.
@@ -2270,7 +2271,7 @@ module Std : sig
       and only tries hints with zero cost. Typically used to solve goals for which a
       lemma is already available in the specified hintbases.
 
-      @param debug (default = [Hints.Off])
+      @param debug (default = [Off])
         The debug level. [Off] produces no output, [Info] shows which
         hints were tried, and [Debug] shows detailed proof search.
 
@@ -2410,8 +2411,8 @@ module Unification : sig
          conversion. *)
 
   val conv : Environ.env -> Evd.evar_map -> conv_flag -> TransparentState.t -> constr -> constr -> Evd.evar_map option
-  (** [conv env sigma flag ts c1 c2] returns [Some env] if both [c1] and [c2] are
-      convertible, in which case [env] is the updated environment with the universes
+  (** [conv env sigma flag ts c1 c2] returns [Some sigma] if both [c1] and [c2] are
+      convertible, in which case [sigma] is the updated evar map with the universes
       constraints required for the terms to be convertible. It returns [None] if the
       terms are not convertible.
 
