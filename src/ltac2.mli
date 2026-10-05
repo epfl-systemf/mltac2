@@ -770,7 +770,7 @@ module Pattern : sig
       all of the subterms of [t] that match [pattern] as in {!val:matches}, in the
       current goal. The stream is encoded as a backtracking value whose last
       exception is [Constr_matching.PatternMatchingFailure]. The additional
-      value compared to [matches] is the context of the match, to be filled with
+      value compared to {!val:matches} is the context of the match, to be filled with
       the [instantiate] function. *)
 
   type match_pattern = private ..
@@ -807,7 +807,7 @@ module Pattern : sig
 
       - A list, with one element per pattern in [hpats], containing the name of the
         matched hypothesis, the context of the body pattern (or [None] if the
-        body pattern was [MatchPattern]), and the context of the hypothesis pattern.
+        body pattern was {!Pattern}), and the context of the hypothesis pattern.
       - A context corresponding to the conclusion.
       - A substitution from pattern variables to terms.
 
