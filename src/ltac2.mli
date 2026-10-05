@@ -2132,9 +2132,9 @@ module Std : sig
       proves the goal by case analysis.
 
       @param kind (default = {!constructor:Full})
-        The inversion depth: {!constructor:Simple} does not clear hypotheses, {!constructor:Full} clears
-        trivially equal hypotheses, and {!constructor:Full_clear} additionally clears
-        inverted hypotheses.
+        The inversion depth: {!constructor:Simple} does not clear hypotheses,
+        {!constructor:Full} clears trivially equal hypotheses, and
+        {!constructor:Full_clear} additionally clears inverted hypotheses.
 
       @param as_pattern (default = [None])
         An intro pattern for naming the generated hypotheses.
