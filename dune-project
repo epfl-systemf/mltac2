@@ -21,4 +21,5 @@
  (synopsis "Ltac2 APIs in OCaml")
  (depends
    (coq-core (>= 9.0)) ;; Use coq-core to obtain coqc compatibility binaries
+   (dune (< 3.24)) ;; Dune 3.24 removes "%{coq:version}" variables
    ppx_optcomp))
