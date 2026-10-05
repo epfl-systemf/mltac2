@@ -644,7 +644,7 @@ module Message : sig
       single line, otherwise behaves as a vertical box (using the given int). *)
 
   val hovbox : int -> message -> message
-  (** Horizonal-or-vertical box. Prints as much as possible on each line,
+  (** Horizontal-or-vertical box. Prints as much as possible on each line,
       splitting the line at break hints when there is no more room on the line
       (see "Printing Width" option). The int is added to the indentation when
       splitting the line. *)
@@ -1534,7 +1534,7 @@ module Std : sig
       current goal. "Unneeded" means that the unselected hypotheses and the goal
       don't refer directly or indirectly to the erased hypotheses. That means the
       hypotheses will no longer appear in the context and therefore can't be used in
-      subsequent proof steps. Note that erasing an uneeded hypothesis may turn a
+      subsequent proof steps. Note that erasing an unneeded hypothesis may turn a
       goal that was provable into an unprovable goal.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.clear> Reference manual
@@ -2269,7 +2269,7 @@ module Std : sig
   val trivial : ?debug:debug -> ?dbs:ident list -> reference list -> unit tactic
   (** [trivial refs ?debug ?dbs] behaves like {!val:auto}, but is not recursive
       and only tries hints with zero cost. Typically used to solve goals for which a
-      lemma is already available in the specified hintbases.
+      lemma is already available in the specified hint databases.
 
       @param debug (default = [Off])
         The debug level. [Off] produces no output, [Info] shows which
@@ -2412,7 +2412,7 @@ module Unification : sig
 
   val conv : Environ.env -> Evd.evar_map -> conv_flag -> TransparentState.t -> constr -> constr -> Evd.evar_map option
   (** [conv env sigma flag ts c1 c2] returns [Some sigma] if both [c1] and [c2] are
-      convertible, in which case [sigma] is the updated evar map with the universes
+      convertible, in which case [sigma] is the updated evar map with the universe
       constraints required for the terms to be convertible. It returns [None] if the
       terms are not convertible.
 
