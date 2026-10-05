@@ -271,10 +271,10 @@ module Control : sig
   (** [case] is the most general primitive to control backtracking:
 
       - If [t] would fail with [e], [case t] returns [Fail e].
-      - If [t] would succeed and evaluate to [v] then [case t] returns [Next (v, h)],
+      - If [t] would succeed and evaluate to [v], then [case t] returns [Next (v, h)],
         where [h] is the continuation to execute in case of subsequent
         failure. Calling [h] resets the backtrackable state to its value when
-        case was called.
+        [case] was called.
 
         [case] reifies a backtracking computation into an inspectable value; it
         allows the programmer to make explicit the effects which are normally
@@ -294,7 +294,7 @@ module Control : sig
       number of focused goals. *)
 
   val extend : unit tactic list -> unit tactic -> unit tactic list -> unit tactic
-  (** [extend] is a more flexible variant of dispatch, where the second argument
+  (** [extend] is a more flexible variant of {!dispatch}, where the second argument
       tactic is "repeated" enough times such that every goal has a tactic
       assigned to it. [extend b e r] applies the tactics in [b] to the first
       [length b] goals, the tactics in [r] to the last [length r] goals, and [e]
@@ -316,7 +316,7 @@ module Control : sig
 
   val shelve : unit tactic
   (** Shelve all goals under focus. The goals are placed on the shelf for later
-      use, or to be solved by side-effects. *)
+      use, or to be solved by side effects. *)
 
   val shelve_unifiable : unit tactic
   (** Shelves the unifiable goals under focus, i.e. the goals which appear in
@@ -525,8 +525,8 @@ module Ind : sig
 
   val get_block : data -> int -> data option
   (** [get_block data n] is the block corresponding to the [n]th inductive type
-      in data's parent mutually inductive type. Index must range between [0] and
-      [nblocks data - 1], otherwise the function returns [None]. *)
+      in [data]'s parent mutually inductive type. Index must range between [0]
+      and [nblocks data - 1], otherwise the function returns [None]. *)
 
   val get_constructor : data -> int -> constructor option
   (** [get_constructor data n] returns the [n]th constructor of the inductive
@@ -913,7 +913,8 @@ module Rewrite : sig
         term on which progress can be made. *)
 
     val all_subterms : t -> t
-    (** Applies the argument to all immediate subterms of the considered term, left-to-right.  *)
+    (** Applies the argument to all immediate subterms of the considered term,
+        left-to-right. *)
 
     val bottomup : t -> t
     (** Traverses the term bottom-up, left-to-right and applies the argument at
@@ -942,7 +943,7 @@ module Rewrite : sig
         rewrites left-to-right; otherwise, rewrites right-to-left. *)
 
     val lemmas : preterm list -> t
-    (** Equivalent to [choices (List.map (fun c -> one_lemma c true) l)]. *)
+    (** [lemmas l] is equivalent to [choices (List.map (fun c -> one_lemma c true) l)]. *)
 
     val fold : constr -> t
     (** Replaces the term under consideration with the argument if they unify. *)
@@ -980,8 +981,8 @@ module Rewrite : sig
   end
 
   val rewrite_strat : ?in_hyp:ident -> Strategy.t -> unit tactic
-  (** Runs rewrite strategy on the type of a hypothesis or the goal if the
-      [in_hyp] is [None].
+  (** Runs rewrite strategy on the type of a hypothesis or the goal if [in_hyp]
+      is [None].
 
       @since 9.1 *)
 end
@@ -1349,9 +1350,9 @@ module Syntax : sig
   (** Type of inversion performed. *)
 
   type inversion_kind +=
-     | Simple     (** Behave like Ltac's [simple inversion]. *)
-     | Full       (** Behave like Ltac's [inversion]. *)
-     | Full_clear (** Behave like Ltac's [inversion_clear]. *)
+     | Simple     (** Behaves like Ltac's [simple inversion]. *)
+     | Full       (** Behaves like Ltac's [inversion]. *)
+     | Full_clear (** Behaves like Ltac's [inversion_clear]. *)
 
   (** {3 Rewrites} *)
 
@@ -1365,7 +1366,7 @@ module Syntax : sig
      | Plus           (** [Plus] performs a rewrite as many times as possible and at least once. *)
 
   type oriented_rewriter
-  (** Types of rewriting for the {!val:Std.rewrite} tactic. *)
+  (** Type of rewriters for the {!val:Std.rewrite} tactic. *)
 
   val ( ==> ) : ?n:multiplicity -> ?with_:bindings -> constr -> oriented_rewriter
   (** [(==>) ?n e ?with_] rewrites using equality or equivalence [e], of the form
@@ -1579,7 +1580,7 @@ module Std : sig
   (** [remember ?e t ?as_name ?eqn ?where] is similar to [set ?e as_name t ?where]
       but creates a hypothesis using Leibniz equality to remember the relation
       between the introduced variable and the term rather than creating a local
-      definition. If [as_name] is not specified a fresh name is used. Use [eqn]
+      definition. If [as_name] is not specified, a fresh name is used. Use [eqn]
       to name the new equation.
 
       @param e (default = [false])
@@ -1677,7 +1678,7 @@ module Std : sig
    *)
 
   val exfalso : unit tactic
-  (** Implements the “ex falso quodlibet” logical principle: an elimination of
+  (** Implements the "ex falso quodlibet" logical principle: an elimination of
       [False] is performed on the current goal, and the user is then required to prove
       that [False] is indeed provable in the current context.
 
@@ -1833,7 +1834,7 @@ module Std : sig
     (** A reduction flag. *)
 
     val head : red_flag
-    (** Do only head reduction, without going under binders. *)
+    (** Does only head reduction, without going under binders. *)
 
     val beta : red_flag
     (** Beta-reduction of functional application. *)
