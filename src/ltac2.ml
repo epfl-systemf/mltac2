@@ -1450,9 +1450,15 @@ module Ltac2Std = struct
   let absurd = Contradiction.absurd
   let contradiction ?witness () = Tac2tactics.contradiction (Option.map Syntax.mk_constr_with_bindings witness)
 
+  [%%if rocq >= (9, 3)]
+  let autorewrite ~all ?(forward = true) ?(where = default_on_conclusion) ?using dbs =
+    let using = Option.map (thunk' Tac2ffi.unit) using in
+    Tac2tactics.autorewrite ~all ~forward using dbs where
+  [%%else]
   let autorewrite ~all ?(where = default_on_conclusion) ?using dbs =
     let using = Option.map (thunk' Tac2ffi.unit) using in
     Tac2tactics.autorewrite ~all using dbs where
+  [%%endif]
 
   let subst ?hyps () =
     match hyps with

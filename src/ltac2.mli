@@ -2255,6 +2255,28 @@ module Std : sig
 
       @see <https://rocq-prover.org/doc/master/refman/language/extensions/evars.html#typeclasses-eauto> Reference manual *)
 
+  [%%if rocq >= (9, 3)]
+  val autorewrite : all:bool -> ?forward:bool -> ?where:clause -> ?using:unit tactic -> ident list -> unit tactic
+  (** [autorewrite ~all ?forward ?where ?using dbs] rewrites in the goal using the rewrite
+      rules registered in the specified hint databases [dbs].
+
+      @param all
+        If [true], applies rewrite rules exhaustively (keeps trying until
+        no more rules apply). If [false], applies only one rewrite step.
+
+      @param forward (default = [true]; available since 9.3)
+        If [false], behaves like [autorewrite_backward] instead of
+        [autorewrite].
+
+      @param where (default = [default_on_conclusion])
+        Specifies which occurrences to rewrite.
+
+      @param using (default = [None])
+        An optional tactic to apply after each rewrite step.
+
+      @see <https://rocq-prover.org/doc/master/refman/addendum/generalized-rewriting.html> Reference manual *)
+
+  [%%else]
   val autorewrite : all:bool -> ?where:clause -> ?using:unit tactic -> ident list -> unit tactic
   (** [autorewrite ~all ?where ?using dbs] rewrites in the goal using the rewrite
       rules registered in the specified hint databases [dbs].
@@ -2270,6 +2292,8 @@ module Std : sig
         An optional tactic to apply after each rewrite step.
 
       @see <https://rocq-prover.org/doc/master/refman/addendum/generalized-rewriting.html> Reference manual *)
+
+  [%%endif]
 
   val trivial : ?debug:debug -> ?dbs:ident list -> reference list -> unit tactic
   (** [trivial refs ?debug ?dbs] behaves like {!val:auto}, but is not recursive
