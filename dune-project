@@ -7,6 +7,7 @@
 (subst disabled)
 
 (name rocq-mltac2)
+(version 1.0.0)
 (authors "Dario Halilovic" "Pierre-Marie Pédrot")
 (maintainers "Dario Halilovic")
 (license LGPL-2.1-only)
