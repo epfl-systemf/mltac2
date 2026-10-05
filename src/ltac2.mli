@@ -807,7 +807,7 @@ module Pattern : sig
 
       - A list, with one element per pattern in [hpats], containing the name of the
         matched hypothesis, the context of the body pattern (or [None] if the
-        body pattern was {!Pattern}), and the context of the hypothesis pattern.
+        body pattern was {!constructor:Pattern}), and the context of the hypothesis pattern.
       - A context corresponding to the conclusion.
       - A substitution from pattern variables to terms.
 
@@ -2370,7 +2370,7 @@ module TransparentState : sig
   type strategy_level = private ..
   (** Strategy levels used by [with_strategy].
 
-      @see {!type:Conv_oracle.level} *)
+      See {!type:Conv_oracle.level}. *)
 
   type strategy_level +=
      | Expand       (** Corresponds to the [-oo] level (always unfold). *)
