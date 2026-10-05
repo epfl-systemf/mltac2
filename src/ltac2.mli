@@ -309,7 +309,7 @@ module Control : sig
   val focus : int -> int -> 'a tactic -> 'a tactic
   (** [focus i j t] focuses a proofview on the goals from index [i] to index
       [j] (inclusive, goals are indexed from 1) and runs [t] with those goals under
-      focus, i.e. goals number [i] to [j] become the only focused goals during the
+      focus, i.e., goals number [i] to [j] become the only focused goals during the
       execution of [t]. When focus returns, the present focus is restored.
 
       If the range [i]–[j] is invalid, fails with a backtrackable "no such goal" error. *)
@@ -319,7 +319,7 @@ module Control : sig
       use, or to be solved by side effects. *)
 
   val shelve_unifiable : unit tactic
-  (** Shelves the unifiable goals under focus, i.e. the goals which appear in
+  (** Shelves the unifiable goals under focus, i.e., the goals which appear in
       other goals under focus (the unfocused goals are not considered). *)
 
   val unshelve : 'a tactic -> 'a tactic
@@ -687,7 +687,7 @@ module Module : sig
       @since 9.2 *)
 
   val is_library : t -> bool
-  (** [is_library m] returns [true] for modules which are libraries (i.e. files).
+  (** [is_library m] returns [true] for modules which are libraries (i.e., files).
 
       @since 9.2 *)
 
@@ -963,7 +963,7 @@ module Rewrite : sig
         optional relation constraint [rel] is given.
 
         The tactic is applied to a single goal of type [unit] whose context
-        corresponds to the context of the term to rewrite (i.e. the context of
+        corresponds to the context of the term to rewrite (i.e., the context of
         the goal at the start of the [rewrite_strat] call extended with the
         binders that were traversed to attain this subterm). The tactic should
         return a [Rewrite.Result.t] indicating success, failure or no progress and
@@ -1212,7 +1212,7 @@ module Syntax : sig
       in [as] clauses. *)
 
   type orientation = [ `Orientation ]
-  (** Tag for intropatterns that are used as rewrite orientations (i.e. [(-->)] and [(<--)]). *)
+  (** Tag for intropatterns that are used as rewrite orientations (i.e., [(-->)] and [(<--)]). *)
 
   type equality = [ orientation | `Equality ]
   (** Tag for equality intropatterns. *)
@@ -1563,8 +1563,8 @@ module Std : sig
 
       @param e (default = [false])
         If [e] is [true], generates existential variables for uninstantiated
-        variables instead of failing. In practice, this is relevant only when eset
-        is used as a synonym of [epose], i.e. when the term does not occur in the
+        variables instead of failing. In practice, this is relevant only when [eset]
+        is used as a synonym of [epose], i.e., when the term does not occur in the
         goal.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.set> Reference manual
@@ -1886,7 +1886,7 @@ module Std : sig
         key differences:
 
         - It unfolds constants only if they lead to an [ι]-reduction,
-          i.e. reducing a match or unfolding a fixpoint.
+          i.e., reducing a match or unfolding a fixpoint.
 
         - When reducing a constant unfolding to (co)fixpoints, the tactic uses
           the name of the constant the (co)fixpoint comes from instead of the
@@ -2099,7 +2099,7 @@ module Std : sig
 
   val injection : ?e:bool -> ?arg:Induction_arg.t -> ?as_patterns:simple intropattern list -> unit -> unit tactic
   (** [injection ?e ?as_patterns ?arg ()] exploits the property that constructors of
-      inductive types are injective, i.e. that if [c] is a constructor of an inductive
+      inductive types are injective, i.e., that if [c] is a constructor of an inductive
       type, then [c t1 = c t2] implies [t1 = t2].
 
       @param e (default = [false])
