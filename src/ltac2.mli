@@ -237,7 +237,7 @@ module Constructor : sig
 
   val index : t -> int
   (** [index constructor] returns the index of the given constructor (such that
-      [c] is [Ind.get_constructor (Ind.data (inductive c)) (index c))]). *)
+      [c] is [Ind.get_constructor (Ind.data (inductive c)) (index c)]). *)
 
   val print : t -> message
   (** [print constructor] prints the constructor using the shortest qualified
@@ -341,8 +341,8 @@ module Control : sig
       Raises if [l] is not a permutation of ints from [1] to [numgoals]. *)
 
   val cycle : int -> unit tactic
-  (** If [n] is positive, [cycle n] puts the [n] first goal last. If [n] is
-      negative, then it puts the [n] last goals first. *)
+  (** If [n] is positive, [cycle n] puts the first [n] goal last. If [n] is
+      negative, then it puts the last [n] goals first. *)
 
   val progress : 'a tactic -> 'a tactic
   (** [progress t] checks the state of the proof after [t]. If it is identical
@@ -611,7 +611,7 @@ module Message : sig
   [%%endif]
 
   val concat : message -> message -> message
-  (** [concat m1 m2] concats two messages. *)
+  (** [concat m1 m2] concatenates two messages. *)
 
   (** {3 Boxing primitives}
 
@@ -836,8 +836,7 @@ module Proj : sig
   (** [ind proj] returns the inductive to which the projection belongs. *)
 
   val index : t -> int
-  (** [index proj] returns the index of the projection indicates which field it
-      projects. *)
+  (** [index proj] returns the index of the field that [proj] projects. *)
 
   val unfolded : t -> bool
   (** [unfolded proj] returns the unfolding boolean. *)
@@ -898,8 +897,8 @@ module Rewrite : sig
     (** [try_ t] is equivalent to [choice t id]. *)
 
     val fix : (t -> t) -> t
-    (** Fixed point operation for recursive strategies. [fix (fun f => s)]
-        evaluates to [s [f / fix (fun f => s)]]. The function provided in the
+    (** Fixed point operation for recursive strategies. [fix (fun f -> s)]
+        evaluates to [s [f / fix (fun f -> s)]]. The function provided in the
         argument is executed only once when the strategy is constructed — it
         cannot be used to dynamically manage the rewriting. *)
 
@@ -929,7 +928,7 @@ module Rewrite : sig
         progress. *)
 
     val outermost : t -> t
-    (** Traverses the term top-down--left-to-right until the argument makes
+    (** Traverses the term top-down, left-to-right until the argument makes
         progress. *)
 
     val hints : ident -> t
@@ -938,12 +937,12 @@ module Rewrite : sig
     val old_hints : ident -> t
 
     val one_lemma : preterm -> ltr:bool -> t
-    (** Unifies the one side of the lemma with the current subterm and on
+    (** Unifies one side of the lemma with the current subterm and on
         success rewrite it to the other side. If [ltr] is true,
         rewrites left-to-right; otherwise, rewrites right-to-left. *)
 
     val lemmas : preterm list -> t
-    (** Equivalent to [choices (List.map (fun c => one_lemma c true)) l]. *)
+    (** Equivalent to [choices (List.map (fun c -> one_lemma c true) l)]. *)
 
     val fold : constr -> t
     (** Replaces the term under consideration with the argument if they unify. *)
@@ -1649,7 +1648,7 @@ module Std : sig
   val absurd : constr -> unit tactic
   (** [absurd P] applies [False] elimination, that is it deduces the current goal
       from [False], and generates as subgoals [~P] and [P]. It is very useful in
-      proofs by cases, where some cases are impossible. In most cases, [P] or [∼P]
+      proofs by cases, where some cases are impossible. In most cases, [P] or [~P]
       is one of the hypotheses of the local context.
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.absurd> Reference manual
@@ -1662,7 +1661,7 @@ module Std : sig
       does an {!val:intros}. The tactic then proves the goal if
 
       - The updated context has a pair of hypotheses where one is the negation
-        of the other (e.g. [P] and not [~P]), or
+        of the other (e.g. [P] and [~P]), or
       - There is a hypothesis with an empty inductive type (e.g. [False]), or
       - There is a hypothesis [~P] where [P] is a singleton inductive type
         (e.g. [True] or [x=x]) provable by {!val:constructor}.
@@ -1896,7 +1895,7 @@ module Std : sig
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.simpl> Reference manual *)
 
     val cbv : red_flag list -> t tactic
-    (** [cbv flags] normalize the goal as specified by [flags].
+    (** [cbv flags] normalizes the goal as specified by [flags].
 
         @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.cbv> Reference manual *)
 
@@ -2013,7 +2012,7 @@ module Std : sig
   (** {4 Case analysis} *)
 
   val destruct : ?e:bool -> ?using:constr_with_bindings -> Induction_clause.t list -> unit tactic
-  (** [destruct clauses ?e ?using] perform case analysis on each clause in
+  (** [destruct clauses ?e ?using] performs case analysis on each clause in
       [clauses], generating a subgoal for each of the constructors of the inductive type.
 
       @param e (default = [false])
@@ -2101,7 +2100,7 @@ module Std : sig
   val injection : ?e:bool -> ?arg:Induction_arg.t -> ?as_patterns:simple intropattern list -> unit -> unit tactic
   (** [injection ?e ?as_patterns ?arg ()] exploits the property that constructors of
       inductive types are injective, i.e. that if [c] is a constructor of an inductive
-      type and [c t1 = c t2] then [t1 = t2] are equal too.
+      type, then [c t1 = c t2] implies [t1 = t2].
 
       @param e (default = [false])
         If [e] is [true], creates existential variables for uninstantiated
@@ -2289,7 +2288,7 @@ module Std : sig
 
   val resolve_tc : constr -> unit tactic
   (** [resolve_tc c] resolves the existential variables appearing in the constr
-      whose types are typeclasses. Fail if any of them cannot be resolved. Does
+      whose types are typeclasses. Fail if they cannot be resolved. Does
       not focus.
 
       @see <https://rocq-prover.org/doc/master/refman/language/extensions/evars.html#typeclasses-eauto> Reference manual *)
