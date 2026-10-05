@@ -1256,11 +1256,11 @@ module Syntax : sig
       These patterns can be used when the hypothesis is an equality. *)
 
   val ( --> ) : [> orientation] intropattern
-  (** Replaces the RHS of the hypothesis with the LHS in the conclusion of the
+  (** Replaces the LHS of the hypothesis with the RHS in the conclusion of the
       goal. *)
 
   val ( <-- ) : [> orientation] intropattern
-  (** Replaces the LHS of the hypothesis with the RHS in the conclusion of the
+  (** Replaces the RHS of the hypothesis with the LHS in the conclusion of the
       goal. *)
 
   val ( @= ) : any intropattern list -> [> equality] intropattern
