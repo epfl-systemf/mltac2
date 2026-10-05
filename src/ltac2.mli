@@ -182,25 +182,25 @@ module Constr : sig
       val set_use_coercions : bool -> t -> t
       (** Sets use of coercions during pretyping.
 
-          [true] in [constr_flags]. *)
+          [true] in {!val:constr_flags}. *)
 
       val set_use_typeclasses : bool -> t -> t
       (** Sets whether to run typeclass inference at the end of pretyping and
           when needed according to the "Typeclass Resolution For Conversion"
           flag.
 
-          [true] in [constr_flags]. *)
+          [true] in {!val:constr_flags}. *)
 
       val set_allow_evars : bool -> t -> t
       (** Sets whether to allow pretyping to produce new unresolved evars.
 
-          [false] in [constr_flags]. *)
+          [false] in {!val:constr_flags}. *)
 
       val set_nf_evars : bool -> t -> t
       (** Sets whether to evar-normalize the result of pretyping. This should
           not impact anything other than performance.
 
-          [true] in [constr_flags]. *)
+          [true] in {!val:constr_flags}. *)
     end
 
     val expected_istype : expected_type
@@ -294,7 +294,7 @@ module Control : sig
       number of focused goals. *)
 
   val extend : unit tactic list -> unit tactic -> unit tactic list -> unit tactic
-  (** [extend] is a more flexible variant of {!dispatch}, where the second argument
+  (** [extend] is a more flexible variant of {!val:dispatch}, where the second argument
       tactic is "repeated" enough times such that every goal has a tactic
       assigned to it. [extend b e r] applies the tactics in [b] to the first
       [length b] goals, the tactics in [r] to the last [length r] goals, and [e]
@@ -338,7 +338,7 @@ module Control : sig
       goal [i] after executing the tactic was goal [nth l (i-1)] before
       executing the tactic.
 
-      Raises if [l] is not a permutation of ints from [1] to [numgoals]. *)
+      Raises if [l] is not a permutation of ints from [1] to {!val:numgoals}. *)
 
   val cycle : int -> unit tactic
   (** If [n] is positive, [cycle n] puts the first [n] goals last. If [n] is
@@ -466,7 +466,7 @@ module Fresh : sig
   val next : Free.t -> ident -> ident * Free.t
   (** [next free id] generates a fresh identifier with the given base name which
       is not a member of [free], and returns the updated set. More efficient
-      than composing [fresh] and [Free.add]. *)
+      than composing {!val:fresh} and {!val:Free.add}. *)
 
   [%%endif]
 end
@@ -508,7 +508,7 @@ module Ind : sig
 
   val repr : data -> t
   (** [repr data] returns the name of the inductive type corresponding to the
-      block. Inverse of [data]. *)
+      block. Inverse of {!val:data}. *)
 
   val index : t -> int
   (** [index ind] returns the index of the inductive type inside its mutual
@@ -771,7 +771,7 @@ module Pattern : sig
       current goal. The stream is encoded as a backtracking value whose last
       exception is [Constr_matching.PatternMatchingFailure]. The additional
       value compared to {!val:matches} is the context of the match, to be filled with
-      the [instantiate] function. *)
+      the {!val:instantiate} function. *)
 
   type match_pattern = private ..
   (** Patterns used in goal-matching. *)
@@ -805,9 +805,10 @@ module Pattern : sig
   (** Given a list of patterns [hpats] for hypotheses and one pattern [cpat] for
       the conclusion, [matches_goal ?reverse hpats cpat] produces (a stream of):
 
-      - A list, with one element per pattern in [hpats], containing the name of the
-        matched hypothesis, the context of the body pattern (or [None] if the
-        body pattern was {!constructor:Pattern}), and the context of the hypothesis pattern.
+      - A list, with one element per pattern in [hpats], containing the name of
+        the matched hypothesis, the context of the body pattern (or [None] if
+        the body pattern was {!constructor:match_pattern.Pattern}), and the
+        context of the hypothesis pattern.
       - A context corresponding to the conclusion.
       - A substitution from pattern variables to terms.
 
@@ -865,7 +866,7 @@ end
 [%%if rocq >= (9, 1)]
 module Rewrite : sig
 
-  (** Module for rewrite strategies used by [rewrite_strat]. *)
+  (** Module for rewrite strategies used by {!val:Rewrite.rewrite_strat}. *)
   module Strategy : sig
     type t = Rewrite.strategy
 
@@ -933,7 +934,7 @@ module Rewrite : sig
         progress. *)
 
     val hints : ident -> t
-    (** Applies hints from rewrite hint database. *)
+    (** Applies hints from the rewrite hint database. *)
 
     val old_hints : ident -> t
 
@@ -964,11 +965,11 @@ module Rewrite : sig
 
         The tactic is applied to a single goal of type [unit] whose context
         corresponds to the context of the term to rewrite (i.e., the context of
-        the goal at the start of the [rewrite_strat] call extended with the
+        the goal at the start of the {!val:Rewrite.rewrite_strat} call extended with the
         binders that were traversed to attain this subterm). The tactic should
         return a [Rewrite.Result.t] indicating success, failure or no progress and
         should {e not} solve the goal. Solving the goal is an error that aborts
-        the [rewrite_strat] call. The success record contains the chosen relation
+        the {!val:Rewrite.rewrite_strat} call. The success record contains the chosen relation
         [rel], new right-hand side [rhs] and a proof [prf] of [rel t rhs].
 
         If the proof [prf] is syntactically [eq_refl _], then the witness of the rewriting
@@ -1376,7 +1377,7 @@ module Syntax : sig
       @param n (default = [Exactly 1])
         Number of rewrites to perform.
 
-      @param with_ (default = [No_bindings])
+      @param with_ (default = {!constructor:bindings.No_bindings})
         Bindings to use.
    *)
 
@@ -1388,7 +1389,7 @@ module Syntax : sig
       @param n (default = [Exactly 1])
         Number of rewrites to perform.
 
-      @param with_ (default = [No_bindings])
+      @param with_ (default = {!constructor:bindings.No_bindings})
         Bindings to use.
    *)
 
@@ -1483,7 +1484,7 @@ module Std : sig
         already in use, Rocq will consider using [H0], [H1], etc., until it finds a
         fresh name.
 
-      @param where (default = [At_bottom])
+      @param where (default = {!constructor:move_location.At_bottom})
         Indicates where to place the introduced hypothesis: at the top or bottom
         of the context or before or after another specified hypothesis.
 
@@ -1504,11 +1505,11 @@ module Std : sig
    *)
 
   val intros_until : hypothesis -> unit tactic
-  (** [intros_until nat_or_hyp] repeats [intro] until it has introduced a
+  (** [intros_until nat_or_hyp] repeats {!val:intro} until it has introduced a
       dependent premise with the given name, or has introduced the given number
       of premises.
 
-      We recommend explicitly naming items with [intros] instead of using
+      We recommend explicitly naming items with {!val:intros} instead of using
       [intros_until (Nth_hyp n)].
 
       @see <https://rocq-prover.org/doc/master/refman/proof-engine/tactics.html#rocq:tacn.intros-until> Reference manual
@@ -1721,7 +1722,7 @@ module Std : sig
   (** {4 Tactics for simple equalities} *)
 
   val reflexivity : unit tactic
-  (** After doing an [intros], if the resulting goal is in the form [t = u] in
+  (** After doing an {!val:intros}, if the resulting goal is in the form [t = u] in
       which [t] and [u] are definitionally equal, the tactic proves the goal (by
       applying [eq_refl]). If not, it fails.
 
@@ -1746,7 +1747,7 @@ module Std : sig
    *)
 
   val etransitivity : unit tactic
-  (** [etransitivity] behaves like [transitivity], using a fresh evar instead of a concrete term.
+  (** [etransitivity] behaves like {!val:transitivity}, using a fresh evar instead of a concrete term.
 
       @see <https://rocq-prover.org/doc/master/refman/proofs/writing-proofs/equality.html#rocq:tacn.etransitivity> Reference manual
    *)
@@ -2127,9 +2128,9 @@ module Std : sig
       equations for all constructors of the inductive type of [arg] and
       proves the goal by case analysis.
 
-      @param kind (default = [Syntax.Full])
-        The inversion depth: [Simple] does not clear hypotheses, [Full] clears
-        trivially equal hypotheses, and [Full_clear] additionally clears
+      @param kind (default = {!constructor:Full})
+        The inversion depth: {!constructor:Simple} does not clear hypotheses, {!constructor:Full} clears
+        trivially equal hypotheses, and {!constructor:Full_clear} additionally clears
         inverted hypotheses.
 
       @param as_pattern (default = [None])
@@ -2193,9 +2194,10 @@ module Std : sig
       backtracking, which tries to solve the goal by applying hints from the
       specified databases.
 
-      @param debug (default = [Off])
-        The debug level. [Off] produces no output, [Info] shows which
-        hints were tried, and [Debug] shows detailed proof search.
+      @param debug (default = {!constructor:debug.Off})
+        The debug level. {!constructor:debug.Off} produces no output,
+        {!constructor:debug.Info} shows which hints were tried, and
+        {!constructor:debug.Debug} shows detailed proof search.
 
       @param n (default = [None])
         The search depth limit.
@@ -2214,9 +2216,10 @@ module Std : sig
   (** [eauto refs ?debug ?n ?dbs] applies the eauto proof search algorithm,
       which extends auto with unification hints and e-unification.
 
-      @param debug (default = [Off])
-        The debug level. [Off] produces no output, [Info] shows which
-        hints were tried, and [Debug] shows detailed proof search.
+      @param debug (default = {!constructor:debug.Off})
+        The debug level. {!constructor:debug.Off} produces no output,
+        {!constructor:debug.Info} shows which hints were tried, and
+        {!constructor:debug.Debug} shows detailed proof search.
 
       @param n (default = [None])
         The search depth limit.
@@ -2270,9 +2273,10 @@ module Std : sig
       and only tries hints with zero cost. Typically used to solve goals for which a
       lemma is already available in the specified hint databases.
 
-      @param debug (default = [Off])
-        The debug level. [Off] produces no output, [Info] shows which
-        hints were tried, and [Debug] shows detailed proof search.
+      @param debug (default = {!constructor:debug.Off})
+        The debug level. {!constructor:debug.Off} produces no output,
+        {!constructor:debug.Info} shows which hints were tried, and
+        {!constructor:debug.Debug} shows detailed proof search.
 
       @param dbs (default = [None])
         A list of hint database names to use. If not provided, the default
@@ -2369,7 +2373,7 @@ module TransparentState : sig
 
   [%%if rocq >= (9, 3)]
   type strategy_level = private ..
-  (** Strategy levels used by [with_strategy].
+  (** Strategy levels used by {!val:with_strategy}.
 
       See {!type:Conv_oracle.level}. *)
 
