@@ -620,7 +620,7 @@ module Message : sig
   val force_new_line : message
   (** [force_new_line] forces writing on a new line after this.
 
-      Warning: partially reinitialises the pretty-printing engine, potentially
+      Warning: partially reinitializes the pretty-printing engine, potentially
       leading to bad printing afterwards. Prefer using a break hint inside a
       vertical box. *)
 
@@ -2414,7 +2414,7 @@ module Unification : sig
       constraints required for the terms to be convertible. It returns [None] if the
       terms are not convertible.
 
-      [conv] is parametrised by:
+      [conv] is parametrized by:
       - [flag] which controls if conversion is done up to cumulativity or not.
       - [ts] which controls which constants get unfolded during conversion. *)
 
