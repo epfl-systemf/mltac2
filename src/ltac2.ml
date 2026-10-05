@@ -825,7 +825,7 @@ module Ltac2Module = struct
     let senv = close senv modtype in
     Safe_typing.structure_body_of_safe_env senv
 
-  let contents m =
+  let module_contents m =
     let body =
       if is_open m then
         (* XXX not sure what this does with side effects *)
@@ -871,16 +871,16 @@ module Ltac2Rewrite = struct
     let fix          = Rewrite.Strategies.fix
     let any          = Rewrite.Strategies.any
     let repeat       = Rewrite.Strategies.repeat
-    let one_subterm  = Rewrite.Strategies.one_subterm
-    let all_subterms = Rewrite.Strategies.all_subterms
+    let subterm      = Rewrite.Strategies.one_subterm
+    let subterms     = Rewrite.Strategies.all_subterms
     let bottomup     = Rewrite.Strategies.bottomup
     let topdown      = Rewrite.Strategies.topdown
     let innermost    = Rewrite.Strategies.innermost
     let outermost    = Rewrite.Strategies.outermost
     let hints        = Tac2tactics.RewriteStrats.hints
     let old_hints    = Tac2tactics.RewriteStrats.old_hints
-    let one_lemma c ~ltr = Tac2tactics.RewriteStrats.one_lemma c ltr
-    let lemmas       = Tac2tactics.RewriteStrats.lemmas
+    let term c ~ltr  = Tac2tactics.RewriteStrats.one_lemma c ltr
+    let terms        = Tac2tactics.RewriteStrats.lemmas
     let fold         = Rewrite.Strategies.fold
     let eval         = Rewrite.Strategies.reduce
     [%%if rocq >= (9, 3)]

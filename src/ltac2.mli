@@ -738,10 +738,10 @@ module Module : sig
        (** A rewrite rule. *)
   end
 
-  val contents : t -> Field.t list option
-  (** [contents m] returns the contents of the given module ([None] on closed
-      functors and module types). Inductives are represented only by the first
-      inductive of each mutual block (and no constructors).
+  val module_contents : t -> Field.t list option
+  (** [module_contents m] returns the contents of the given module ([None] on
+      closed functors and module types). Inductives are represented only by the
+      first inductive of each mutual block (and no constructors).
 
       @since 9.2 *)
 end
@@ -909,11 +909,11 @@ module Rewrite : sig
     val repeat : t -> t
     (** [repeat s] is equivalent to [seq s (any s)]. *)
 
-    val one_subterm : t -> t
+    val subterm : t -> t
     (** Applies the argument to the leftmost immediate subterm of the considered
         term on which progress can be made. *)
 
-    val all_subterms : t -> t
+    val subterms : t -> t
     (** Applies the argument to all immediate subterms of the considered term,
         left-to-right. *)
 
@@ -938,13 +938,13 @@ module Rewrite : sig
 
     val old_hints : ident -> t
 
-    val one_lemma : preterm -> ltr:bool -> t
+    val term : preterm -> ltr:bool -> t
     (** Unifies one side of the lemma with the current subterm and on
         success rewrites it to the other side. If [ltr] is true,
         rewrites left-to-right; otherwise, rewrites right-to-left. *)
 
-    val lemmas : preterm list -> t
-    (** [lemmas l] is equivalent to [choices (List.map (fun c -> one_lemma c ~ltr:true) l)]. *)
+    val terms : preterm list -> t
+    (** [terms l] is equivalent to [choices (List.map (fun c -> one_lemma c ~ltr:true) l)]. *)
 
     val fold : constr -> t
     (** Replaces the term under consideration with the argument if they unify. *)
