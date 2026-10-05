@@ -50,7 +50,7 @@ module Constr : sig
   type t = constr
 
   val type_ : Environ.env -> Evd.evar_map -> t -> Evd.evar_map * t
-  (** [type_ env sigma t ] returns the type of [t] in the given environment
+  (** [type_ env sigma t] returns the type of [t] in the given environment
       and evar map, along with the updated evar map. *)
 
   val equal : Evd.evar_map -> t -> t -> bool
@@ -233,7 +233,7 @@ module Constructor : sig
 
   val inductive : t -> inductive
   (** [inductive constructor] returns the inductive to which [constructor]
-      belongs.  *)
+      belongs. *)
 
   val index : t -> int
   (** [index constructor] returns the index of the given constructor (such that
@@ -427,7 +427,7 @@ module Env : sig
 
   val expand : Libnames.qualid -> reference list
   (** [expand qualid] returns the list of all global references whose absolute
-      name contains the argument list as a suffix.  *)
+      name contains the argument list as a suffix. *)
 
   val instantiate : Environ.env -> Evd.evar_map -> reference -> Evd.evar_map * constr
   (** [instantiate env sigma ref] returns a fresh instance of the corresponding
@@ -857,7 +857,7 @@ module Proj : sig
   val print : t -> message
   (** [print proj] prints the projection using the shortest qualified identifier
       which refers to it. Does not avoid variable names in the current or global
-      environment.  *)
+      environment. *)
 end
 
 (** {2 Rewriting} *)
@@ -966,12 +966,12 @@ module Rewrite : sig
         the goal at the start of the [rewrite_strat] call extended with the
         binders that were traversed to attain this subterm). The tactic should
         return a [Rewrite.Result.t] indicating success, failure or no progress and
-        should *not* solve the goal. Solving the goal is an error that aborts
+        should {e not} solve the goal. Solving the goal is an error that aborts
         the [rewrite_strat] call. The success record contains the chosen relation
         [rel], new right-hand side [rhs] and a proof [prf] of [rel t rhs].
 
         If the proof [prf] is syntactically [eq_refl _], then the witness of the rewriting
-        is simply a *conversion* requiring no explicit proof and no congruence lemmas
+        is simply a {e conversion} requiring no explicit proof and no congruence lemmas
         for the context of the rewrite.
 
         @since 9.3 *)
@@ -1074,7 +1074,6 @@ module Scheme : sig
   (** Dependent case analysis scheme for SProp.
 
       @since 9.3 *)
-
 
   val scase_nodep : kind
   (** Non-dependent case analysis scheme for SProp.
@@ -1831,7 +1830,7 @@ module Std : sig
     (** Does not limit delta unfolding. Equivalent to [except []]. *)
 
     type red_flag
-    (** Type of reduction flag. *)
+    (** A reduction flag. *)
 
     val head : red_flag
     (** Do only head reduction, without going under binders. *)
@@ -2311,7 +2310,7 @@ module TransparentState : sig
   (** [empty] is the empty transparency state (all constants are opaque). *)
 
   val full : t
-  (** [full] is the full transparency state (all constants are transparent).  *)
+  (** [full] is the full transparency state (all constants are transparent). *)
 
   val current : unit -> t tactic
   (** [current ()] gives the transparency state of the goal, which is influenced
@@ -2406,7 +2405,7 @@ module Unification : sig
      (** Enables cumulativity [Prop ≤ Set ≤ Type 1 ≤ … ≤ Type i ≤ …] for conversion. *)
 
      | Conv
-     (** Do not enable cumulativity [Prop ≤ Set ≤ Type 1 ≤ … ≤ Type i ≤ …] for
+     (** Does not enable cumulativity [Prop ≤ Set ≤ Type 1 ≤ … ≤ Type i ≤ …] for
          conversion. *)
 
   val conv : Environ.env -> Evd.evar_map -> conv_flag -> TransparentState.t -> constr -> constr -> Evd.evar_map option
