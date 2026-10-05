@@ -1250,8 +1250,11 @@ module Syntax : sig
   (** [and_pattern [p₁; …; pₙ]] is equivalent to [p₁ & … & pₙ]. *)
 
   val or_pattern : any intropattern list list -> [> or_and] intropattern
-  (** [or_pattern [p₁; …; pₙ]] splits a hypothesis of the form [A₁ \/ … \/ Aₙ]
-      into [n] subgoals, where the [i]-th subgoal will have [pᵢ: Aᵢ]. *)
+  (** [or_pattern [[p₁₁; …; p₁ₘ]; …; [pₙ₁; …; pₙₖ]]] destructs a hypothesis whose
+      inductive type has [n] constructors (e.g., [A₁ ∨ … ∨ Aₙ]) into [n] subgoals.
+      In the [i]-th subgoal, the arguments of the [i]-th constructor are named by
+      the patterns of the [i]-th inner list. Corresponds to [[p₁₁ … p₁ₘ | … | pₙ₁ … pₙₖ]]
+      in Ltac. *)
 
   (** {4 Equality patterns}
 
