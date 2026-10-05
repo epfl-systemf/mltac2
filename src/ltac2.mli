@@ -757,7 +757,7 @@ module Pattern : sig
   val empty_context : context
   (** A trivial context only made of the hole. *)
 
-  type substitution = EConstr.t Id.Map.t
+  type substitution = constr Id.Map.t
   (** A substitution is a mapping from pattern variables to terms. *)
 
   val matches : Environ.env -> Evd.evar_map -> pattern -> constr -> substitution option
