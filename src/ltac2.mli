@@ -944,7 +944,7 @@ module Rewrite : sig
         rewrites left-to-right; otherwise, rewrites right-to-left. *)
 
     val lemmas : preterm list -> t
-    (** [lemmas l] is equivalent to [choices (List.map (fun c -> one_lemma c true) l)]. *)
+    (** [lemmas l] is equivalent to [choices (List.map (fun c -> one_lemma c ~ltr:true) l)]. *)
 
     val fold : constr -> t
     (** Replaces the term under consideration with the argument if they unify. *)
@@ -1863,7 +1863,7 @@ module Std : sig
     val all_flags : head:bool -> red_flag list
     (** All reduction flags.
 
-        @param head (bool)
+        @param head
           Whether to perform head reduction or not. *)
 
     type t = Redexpr.red_expr
