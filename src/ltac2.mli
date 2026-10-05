@@ -2198,7 +2198,7 @@ module Std : sig
         hints were tried, and [Debug] shows detailed proof search.
 
       @param n (default = [None])
-        The search depth limit. Defaults to 5.
+        The search depth limit.
 
       @param dbs (default = [None])
         A list of hint database names to use. If not provided, the default
@@ -2219,7 +2219,7 @@ module Std : sig
         hints were tried, and [Debug] shows detailed proof search.
 
       @param n (default = [None])
-        The search depth limit. Defaults to 5.
+        The search depth limit.
 
       @param dbs (default = [None])
         A list of hint database names to use. If not provided, the default
