@@ -1205,7 +1205,7 @@ module Syntax : sig
    *)
 
   type naming = [ `Naming ]
-  (** Tag for intropatterns used for naming hypotheses (e.g. in [eqn:]
+  (** Tag for intropatterns used for naming hypotheses (e.g., in [eqn:]
       clauses). *)
 
   type or_and = [ `Or_and ]
@@ -1662,10 +1662,10 @@ module Std : sig
       does an {!val:intros}. The tactic then proves the goal if
 
       - The updated context has a pair of hypotheses where one is the negation
-        of the other (e.g. [P] and [~P]), or
-      - There is a hypothesis with an empty inductive type (e.g. [False]), or
+        of the other (e.g., [P] and [~P]), or
+      - There is a hypothesis with an empty inductive type (e.g., [False]), or
       - There is a hypothesis [~P] where [P] is a singleton inductive type
-        (e.g. [True] or [x=x]) provable by {!val:constructor}.
+        (e.g., [True] or [x=x]) provable by {!val:constructor}.
 
       @param witness (default = [None])
         If [witness] is provided, its type must be a negation, such as [~P], or
