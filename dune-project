@@ -6,7 +6,7 @@
 ;; LATER: bump to Dune 3.21 once we no longer use Rocq 9.2 in CI
 (subst disabled)
 
-(name mltac2)
+(name rocq-mltac2)
 (authors "Dario Halilovic" "Pierre-Marie Pédrot")
 (maintainers "Dario Halilovic")
 (license LGPL-2.1-only)
@@ -17,7 +17,7 @@
 (bug_reports "https://github.com/epfl-systemf/mltac2/issues")
 
 (package
- (name mltac2)
+ (name rocq-mltac2)
  (synopsis "Ltac2 APIs in OCaml")
  (depends
    (coq-core (>= 9.0)) ;; Use coq-core to obtain coqc compatibility binaries
