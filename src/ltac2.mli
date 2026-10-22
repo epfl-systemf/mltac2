@@ -1234,6 +1234,11 @@ module Syntax : sig
   val name : ident -> [> naming] intropattern
   (** [name ident] uses the specified name. *)
 
+  val ( ~: ) : ident -> [> naming] intropattern
+  (** [~:ident] uses the specified name.
+
+      @since MLtac2 1.1 *)
+
   val ( ?? ) : [> naming ] intropattern
   (** [(??)] lets Rocq generate a fresh name. *)
 

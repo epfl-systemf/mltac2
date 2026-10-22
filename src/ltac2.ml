@@ -1055,6 +1055,7 @@ module Syntax = struct
   (** {4 Naming patterns} *)
 
   let name h = IntroNaming (IntroIdentifier h)
+  let ( ~: ) = name
   let fresh h = IntroNaming (IntroFresh h)
   let ( ?: ) = fresh
   let ( ?? ) = IntroNaming IntroAnonymous

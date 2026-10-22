@@ -68,11 +68,11 @@ let test_intros_star2 =
 
 (** [intros x] *)
 let test_intros_name (x: ident) =
-  intros [name x]
+  intros [~:x]
 
 (** [intros x y] *)
 let test_intros_name2 (x: ident) (y: ident) =
-  intros [name x; name y]
+  intros [~:x; ~:y]
 
 (** [intros ?] *)
 let test_intros_fresh =
