@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <style>
+    text { font-family: "Iosevka", "Iosevka Term", monospace; font-size: 14px; fill: #4c4f69; white-space: pre; }
+    .g { fill: #000000; font-weight: bold; }
+    .m { fill: #df8e1d; }
+    .f { fill: #1e66f5; }
+    .d { fill: #9ca0b0; }
+    .u { fill: #fe640b; }
+    .b { fill: #d20f39; }
+  </style>
+  <rect width="640" height="420" fill="#ffffff"/>
+  <g xml:space="preserve">
+    <text x="20" y="30"><tspan class="g">module</tspan> <tspan class="m">Env</tspan> : <tspan class="g">sig</tspan></text>
+    <text x="20" y="50">  <tspan class="g">val</tspan> <tspan class="f">get</tspan> : <tspan class="m">Libnames.</tspan>full_path -&gt; reference</text>
+    <text x="20" y="70">  <tspan class="d">(** </tspan><tspan class="u">[</tspan>get path<tspan class="u">]</tspan><tspan class="d"> returns the global reference corresponding to the</tspan></text>
+    <text x="20" y="90"><tspan class="d">      absolute name given as argument.</tspan></text>
+    <text x="20" y="130">      <tspan class="u">@raise</tspan><tspan class="d"> </tspan><tspan class="b">Not_found</tspan></text>
+    <text x="20" y="150"><tspan class="d">        If the path does not correspond to a reference. *)</tspan></text>
+    <text x="20" y="190">  <tspan class="g">val</tspan> <tspan class="f">path</tspan> : reference -&gt; <tspan class="m">Libnames.</tspan>full_path</text>
+    <text x="20" y="210">  <tspan class="d">(** </tspan><tspan class="u">[</tspan>path <tspan class="b">ref</tspan><tspan class="u">]</tspan><tspan class="d"> returns the absolute name of the given reference.</tspan></text>
+    <text x="20" y="250">      <tspan class="u">@raise</tspan><tspan class="d"> </tspan><tspan class="b">Not_found</tspan></text>
+    <text x="20" y="270"><tspan class="d">        If the reference does not exist. *)</tspan></text>
+    <text x="20" y="310">  <tspan class="g">val</tspan> <tspan class="f">expand</tspan> : <tspan class="m">Libnames.</tspan>qualid -&gt; reference list</text>
+    <text x="20" y="330">  <tspan class="d">(** </tspan><tspan class="u">[</tspan>expand qualid<tspan class="u">]</tspan><tspan class="d"> returns the list of all global references</tspan></text>
+    <text x="20" y="350"><tspan class="d">      whose absolute name contains the argument list as a suffix. *)</tspan></text>
+    <text x="20" y="390">  <tspan class="d">(* … *)</tspan></text>
+  </g>
+</svg>
