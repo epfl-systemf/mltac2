@@ -10,7 +10,9 @@ MLtac2 provides:
 
 1. A set of meta-programming APIs for interacting with Rocq that are guaranteed to be **stable across Rocq versions**;
 
-2. A simple entry-point for meta-programming and discovering Rocq APIs.
+2. A simple entry-point for meta-programming and discovering Rocq APIs;
+
+3. Standard tactics from Ltac2 with Ltac2-like syntax (`Syntax` module).
 
 ## Compatibility guarantees
 
