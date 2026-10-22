@@ -2,9 +2,9 @@
 
 MLtac2 is a simple library that packages part of the Ltac2 APIs for use in OCaml plugins.
 
-<center>
+<div align="center">
   <img src="etc/showcase.png" width="75%" alt="Showcase image of MLtac2" />
-</center>
+</div>
 
 MLtac2 provides:
 
