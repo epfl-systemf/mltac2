@@ -1235,15 +1235,21 @@ module Syntax : sig
   (** [name ident] uses the specified name. *)
 
   val ( ~: ) : ident -> [> naming] intropattern
-  (** [~:ident] uses the specified name.
+  (** [~:ident] uses the specified name. Equivalent to [name ident].
 
       @since MLtac2 1.1 *)
 
   val ( ?? ) : [> naming ] intropattern
   (** [(??)] lets Rocq generate a fresh name. *)
 
+  val fresh : ident -> [> naming] intropattern
+  (** [fresh ident] lets Rocq generate a fresh name that begins with [ident].
+
+      @since MLtac2 1.1 *)
+
   val ( ?: ) : ident -> [> naming] intropattern
-  (** [?:ident] lets Rocq generate a fresh name that begins with [ident]. *)
+  (** [?:ident] lets Rocq generate a fresh name that begins with
+      [ident]. Equivalent to [fresh ident]. *)
 
   (** {4 Splitting patterns} *)
 
