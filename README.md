@@ -3,7 +3,7 @@
 MLtac2 is a simple library that packages part of the Ltac2 APIs for use in OCaml plugins.
 
 <div align="center">
-  <img src="etc/showcase.png" width="75%" alt="Showcase image of MLtac2" />
+  <img src="etc/showcase.svg" width="90%" alt="Showcase image of MLtac2" />
 </div>
 
 MLtac2 provides:
