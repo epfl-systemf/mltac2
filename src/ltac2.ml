@@ -840,10 +840,10 @@ module Ltac2Module = struct
     let to_field (lab, f) : Field.t = match (f:_ Declarations.structure_field_body) with
       | SFBconst _ ->
          let kn = KerName.make m lab in
-         Field.Ref (ConstRef (Global.constant_of_delta_kn kn))
+         Field.Ref (ConstRef ((Global.constant_of_delta_kn [@warning "-3"]) kn))
       | SFBmind _ ->
          let kn = KerName.make m lab in
-         Field.Ref (IndRef ((Global.mind_of_delta_kn kn, 0)))
+         Field.Ref (IndRef (((Global.mind_of_delta_kn [@warning "-3"]) kn, 0)))
       | SFBrules _ -> Field.Rewrule
       | SFBmodule _ -> Field.Submodule (MPdot (m, lab))
       | SFBmodtype _ -> Field.Submodule (MPdot (m, lab))
