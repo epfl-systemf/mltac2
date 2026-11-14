@@ -825,6 +825,14 @@ module Ltac2Module = struct
     let senv = close senv modtype in
     Safe_typing.structure_body_of_safe_env senv
 
+  [%%if rocq >= (9, 4)]
+  let constant_of_kn kn = Global.constant_of_kn kn
+  let mind_of_kn kn = Global.mind_of_kn kn
+  [%%else]
+  let constant_of_kn kn = Global.constant_of_delta_kn kn
+  let mind_of_kn kn = Global.mind_of_delta_kn kn
+  [%%endif]
+
   let module_contents m =
     let body =
       if is_open m then
@@ -840,10 +848,10 @@ module Ltac2Module = struct
     let to_field (lab, f) : Field.t = match (f:_ Declarations.structure_field_body) with
       | SFBconst _ ->
          let kn = KerName.make m lab in
-         Field.Ref (ConstRef ((Global.constant_of_delta_kn [@warning "-3"]) kn))
+         Field.Ref (ConstRef (constant_of_kn kn))
       | SFBmind _ ->
          let kn = KerName.make m lab in
-         Field.Ref (IndRef (((Global.mind_of_delta_kn [@warning "-3"]) kn, 0)))
+         Field.Ref (IndRef (mind_of_kn kn, 0))
       | SFBrules _ -> Field.Rewrule
       | SFBmodule _ -> Field.Submodule (MPdot (m, lab))
       | SFBmodtype _ -> Field.Submodule (MPdot (m, lab))
