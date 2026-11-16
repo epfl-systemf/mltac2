@@ -1,10 +1,6 @@
-(lang dune 3.17)
+(lang dune 3.21)
 
 (generate_opam_files true)
-
-;; Work-around for Dune 3.17 subst bug: https://github.com/ocaml/dune/issues/11045
-;; LATER: bump to Dune 3.21 once we no longer use Rocq 9.2 in CI
-(subst disabled)
 
 (name rocq-mltac2)
 (version 1.0.0)
@@ -45,6 +41,5 @@ to not annotate the type of partially applied functions from MLtac2.")
    "keyword:ltac2"))
  (depends
    (ocaml (>= 4.14))
-   (coq-core (>= 9.0)) ;; Use coq-core to obtain coqc compatibility binaries
-   (dune (< 3.24)) ;; Dune 3.24 removes "%{coq:version}" variables
+   (rocq-core (>= 9.0))
    ppx_optcomp))

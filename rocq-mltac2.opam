@@ -26,13 +26,14 @@ tags: [
 homepage: "https://github.com/epfl-systemf/mltac2"
 bug-reports: "https://github.com/epfl-systemf/mltac2/issues"
 depends: [
+  "dune" {>= "3.21"}
   "ocaml" {>= "4.14"}
-  "coq-core" {>= "9.0"}
-  "dune" {>= "3.17" & < "3.24"}
+  "rocq-core" {>= "9.0"}
   "ppx_optcomp"
   "odoc" {with-doc}
 ]
 build: [
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"
@@ -46,3 +47,4 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/epfl-systemf/mltac2.git"
+x-maintenance-intent: ["(latest)"]
