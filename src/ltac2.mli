@@ -374,6 +374,15 @@ module Control : sig
   (** [hyps env] returns the list of hypotheses and section variables in the
       environment [env]. *)
 
+  [%%if rocq >= (9, 4)]
+  val is_section_variable : Environ.env -> variable -> bool
+  (** [is_section_variable env id] returns [true] if [id] is bound as a section
+      variable in [env].
+
+      @since 9.4 *)
+
+  [%%endif]
+
   (** {3 Refinement} *)
 
   val refine : (Evd.evar_map -> Evd.evar_map * constr) -> unit tactic
