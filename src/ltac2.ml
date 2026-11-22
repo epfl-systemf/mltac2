@@ -471,6 +471,10 @@ module Ltac2Control = struct
     in
     List.rev_map f (Environ.named_context env)
 
+  [%%if rocq >= (9, 4)]
+  let is_section_variable env id = Termops.is_section_variable_env ~check:false env id
+  [%%endif]
+
   let refine c = Refine.refine ~typecheck:true c
 
   let with_holes x f = Tacticals.tclRUNWITHHOLES false x f
